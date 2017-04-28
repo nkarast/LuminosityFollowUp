@@ -1337,7 +1337,7 @@ class LumiFollowUp(object):
                 df_b1_he_start.insert(0, 'datetime_start' , self.convertToLocalTime(df_b1_he_start['timestamp_start']))
                 df_b1_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
                 df_b1_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b1_he_start))
-                df_b1_he_start.insert(0, 'cycle'          , ['flatop']*len(df_b1_he_start))
+                df_b1_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_start))
                 df_b1_he_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_start))
                 df_b1_he_start.insert(0, 'fill'           , [filln]*len(df_b1_he_start))
                 df_b1_he_start['filled_slots']            = [b1_he_filled_slots]*len(df_b1_he_start)
