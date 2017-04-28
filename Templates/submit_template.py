@@ -2,7 +2,7 @@
 #   submit_template.py  -- Template for python executable for HTCondor submit
 #
 #   Author : Nikos Karastathis (nkarast <at> cern <dot> ch)
-#   Version : 0.2beta (20/04/2017)
+#   Version : 0.3 (28/04/2017)
 
 
 
