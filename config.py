@@ -25,11 +25,18 @@ plot_dir                = "plots/"
 SB_filename             = "fill_<FILLNUMBER><RESC>.pkl.gz"
 Cycle_filename          = "fill_<FILLNUMBER>_cycle<RESC>.pkl.gz"
 Lumi_filename           = "fill_<FILLNUMBER>_lumi_calc<RESC>.pkl.gz"
-Massi_filename          = 'fill_<FILLNUMBER>_lumi_meas.pkl.gz'
 makedirs                = True  # Create the directories if they do not exist
 overwriteFiles          = False
 saveDict                = True
-#savePandas             = False # @TODO Do dis..
+savePandas              = True
+
+
+# --- Massi Files ---
+Massi_filename          = 'fill_<FILLNUMBER>_lumi_meas.pkl.gz'
+massi_file_database     = working_folder+"Utilities/fill_db.yaml"
+massi_year              = 2016
+massi_afs_path          = '/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/'
+massi_exp_folders       = ['ATLAS/', 'CMS/lumi/']
 
 
 # --- Basic Input Data Files ---
@@ -65,7 +72,7 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
 
 
 # --- Plotting parameters ---
-doAllPlots              = True
+doAllPlots              = False
 
 doCyclePlots            = True
 doSBPlots               = True
@@ -94,7 +101,7 @@ getenv     = True
 should_transfer_files = YES
 
 executable = <EXE>
-transfer_input_files = config.py,LumiFollowUp.py
+transfer_input_files = config.py
 output     = <OUT>
 error      = <ERR>
 log        = <LOG>

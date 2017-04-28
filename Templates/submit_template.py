@@ -13,6 +13,9 @@ sys.path.append(LHCMeasToolsDir)
 # For BSRT rescale
 BSRTRescDir = "/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/"
 sys.path.append(BSRTRescDir)
+# for utilities and databases
+LocalModules = os.path.expanduser("%WD")
+sys.path.append(LocalModules)
 
 # cwd
 cwd = os.getcwd()
@@ -21,7 +24,7 @@ sys.path.append(cwd)
 from logging import *
 ###################### lumimod configuration file
 import config
-import LumiFollowUp
+import LumiFollowUp.LumiFollowUp as LumiFollowUp
 
 
 if __name__ == '__main__':
@@ -34,7 +37,7 @@ if __name__ == '__main__':
                                    BBB_DATA_FILE=config.BBB_DATA_FILE, makedirs=config.makedirs, overwriteFiles=config.overwriteFiles,
                                    SB_dir=config.stableBeams_folder, fill_dir=config.fill_dir, plot_dir=config.plot_dir,
                                    SB_filename=config.SB_filename, Cycle_filename=config.Cycle_filename, Lumi_filename=config.Lumi_filename,
-                                   Massi_filename=config.Massi_filename, saveDict=config.saveDict,
+                                   Massi_filename=config.Massi_filename, saveDict=config.saveDict, savePandas=config.savePandas,
                                    #machine parameters
                                    frev=config.frev, gamma=config.gamma, betastar_m=config.betastar_m, crossingAngleChange=config.crossingAngleChange,
                                    XingAngle=config.XingAngle,
@@ -45,6 +48,7 @@ if __name__ == '__main__':
                                    #
                                    force=%FORCE, doOnly=%DOONLY, makePlotTarball=config.makePlotTarball,
                                    #
-                                   fill = %FILL)
+                                   fill = %FILL, submit = True, fill_yaml_database = config.massi_file_database, fill_year=config.massi_year,
+                                   massi_afs_path=config.massi_afs_path, massi_exp_folders=config.massi_exp_folders)
     fl.printConfig()
     fl.runForFillList()

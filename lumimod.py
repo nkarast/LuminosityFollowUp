@@ -20,7 +20,8 @@ from datetime import datetime
 import argparse
 ###################### lumimod configuration file
 import config
-import LumiFollowUp
+import LumiFollowUp.LumiFollowUp as LumiFollowUp
+import Utilities.createYamlDB as createYamlDB
 
 ################################################################################
 #
@@ -130,6 +131,21 @@ def main():
             loglevel = 20
     init_logger(FORMAT=config.FORMAT, logfile=None, loglevel=loglevel)
 
+    #### --- Check if the YAML database exists:
+    if not os.path.exists(config.massi_file_database):
+        warn("# lumimod : YAML database file does not exists! [{}]".format(config.massi_file_database))
+        warn("# lumimod : Creating YAML database & force Massi! [{}]".format(config.massi_file_database))
+        retMas = createYamlDB.createYamlDB(yamldb=config.massi_file_database, year=config.massi_year, afs_path=config.massi_afs_path, exp_folders=config.massi_exp_folders)
+
+        if force == False:
+            force = 'massi'
+            info("# lumimod : Forcing 'massi'.")
+        else:
+            force = True
+            info("# lumimod : Forcing 'all'.")
+    else:
+        info("# lumimod : Database of Massi file modification date found [{}]".format(config.massi_file_database))
+
 
     # --- Get the full fill list
     if fill is None:  # get it from bmodes
@@ -189,15 +205,15 @@ def main():
             log_filename = folder_name+"/lumimod_JOB_{}_{}.log".format(indx , datetime.now().strftime("%Y%m%d"))
 
             # check if template file exists:
-            if not os.path.exists(config.working_folder+"/submit_template.py"):
+            if not os.path.exists(config.working_folder+"/Templates/submit_template.py"):
                 raise IOError("# lumimod : Template of executable for HTCondor job submission not found.")
 
             # create the executable from template data:
             exe_filename = "lumimod_JOB_{}_{}.py".format(indx , datetime.now().strftime("%Y%m%d"))
-            info("# lumimod: Opening Template File [{}]".format(config.working_folder+"/submit_template.py"))
-            templateFile = open(config.working_folder+"/submit_template.py", 'r')
+            info("# lumimod: Opening Template File [{}]".format(config.working_folder+"/Templates/submit_template.py"))
+            templateFile = open(config.working_folder+"/Templates/submit_template.py", 'r')
             templateData = templateFile.read()
-            templateData = templateData.replace("%DEBUG", str(debug)).replace("%LOGLEVEL", str(loglevel)).replace("%FILL", "{}".format(fill))
+            templateData = templateData.replace("%DEBUG", str(debug)).replace("%LOGLEVEL", str(loglevel)).replace("%FILL", "{}".format(fill)).replace("%WD", config.working_folder)
             if force != False and force!=True:
                 templateData = templateData.replace("%FORCE", "'{}'".format(str(force)))
             else:
@@ -213,7 +229,6 @@ def main():
             exe_file.write(templateData)
             exe_file.close()
             templateFile.close()
-
 
             # create *.sub file:
             sub_file = open(sub_filename, 'w')
@@ -252,7 +267,9 @@ def main():
 
 
     else:
-        # Create the LumiFollowUp object
+        print config.massi_year, config.massi_exp_folders
+
+        # # Create the LumiFollowUp object
         fl = LumiFollowUp.LumiFollowUp(debug=debug, batch=batch, FORMAT=config.FORMAT, loglevel=loglevel, logfile=None, fills_bmodes_file=config.fills_bmodes_file,
                                        min_time_SB=config.min_time_SB, first_fill=config.first_fill, last_fill=config.last_fill, t_step_sec=config.t_step_sec,
                                        intensity_threshold=config.intensity_threshold, enable_smoothing_BSRT=config.enable_smoothing_BSRT,
@@ -261,7 +278,7 @@ def main():
                                        BBB_DATA_FILE=config.BBB_DATA_FILE, makedirs=config.makedirs, overwriteFiles=config.overwriteFiles,
                                        SB_dir=config.stableBeams_folder, fill_dir=config.fill_dir, plot_dir=config.plot_dir,
                                        SB_filename=config.SB_filename, Cycle_filename=config.Cycle_filename, Lumi_filename=config.Lumi_filename,
-                                       Massi_filename=config.Massi_filename, saveDict=config.saveDict,
+                                       Massi_filename=config.Massi_filename, saveDict=config.saveDict, savePandas=config.savePandas,
                                        #machine parameters
                                        frev=config.frev, gamma=config.gamma, betastar_m=config.betastar_m, crossingAngleChange=config.crossingAngleChange,
                                        XingAngle=config.XingAngle,
@@ -272,7 +289,8 @@ def main():
                                        #
                                        force=force, doOnly=doOnly, makePlotTarball=config.makePlotTarball,
                                        #
-                                       fill = filln_list)
+                                       fill = filln_list, submit=False, fill_yaml_database=config.massi_file_database, massi_afs_path=config.massi_afs_path,
+                                       fill_year=config.massi_year, massi_exp_folders=config.massi_exp_folders)
         fl.printConfig()
         fl.runForFillList()
 
