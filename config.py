@@ -16,9 +16,9 @@ periods                 = {
 
 
 # --- Folder layout, folder Options and naming conventions ---
-input_folder            = "/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/"
-working_folder          = "/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/autoScriptTesting/"
-output_folder           = ""
+input_folder            = "/afs/cern.ch/work/l/lumimod/a2017_luminosity_followup/"
+working_folder          = input_folder
+data_folder             = input_folder+"dataFiles/"
 stableBeams_folder      = working_folder+"SB_analysis/"
 fill_dir                = "fill_<FILLNUMBER>/"
 plot_dir                = "plots/"
@@ -36,19 +36,20 @@ Massi_filename          = 'fill_<FILLNUMBER>_lumi_meas.pkl.gz'
 massi_file_database     = working_folder+"Utilities/fill_db.yaml"
 massi_year              = 2016
 massi_afs_path          = '/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/'
-massi_exp_folders       = ['ATLAS/', 'CMS/lumi/']
+massi_exp_folders       = ['ATLAS/lumi/', 'CMS/lumi/']
+massi_bunch_lumi_scale  = 1.0e34
 
 
 # --- Basic Input Data Files ---
-BASIC_DATA_FILE         = input_folder+'fill_basic_data_csvs/basic_data_fill_<FILLNUMBER>.csv'
-BBB_DATA_FILE           = input_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_data_fill_<FILLNUMBER>.csv'
-fills_bmodes_file       = input_folder+'fills_and_bmodes.pkl'
+BASIC_DATA_FILE         = data_folder+'fill_basic_data_csvs/basic_data_fill_<FILLNUMBER>.csv'
+BBB_DATA_FILE           = data_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_data_fill_<FILLNUMBER>.csv'
+fills_bmodes_file       = data_folder+'fills_and_bmodes.pkl'
 
 
 # --- BSRT Related Configuration ---
 enable_smoothing_BSRT   = True
 avg_time_smoothing      = 3.0*3600.0
-doRescale               = True
+doRescale               = False
 resc_period             = [('A', 'A'), ('B','C'), ('C', 'C')]
                         # (From, To), (From, To), (From, To)
 add_resc_string         = ''
@@ -72,16 +73,16 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
 
 
 # --- Plotting parameters ---
-doAllPlots              = False
+doAllPlots              = True
 
 doCyclePlots            = True
-doSBPlots               = True
+doSBPlots               = False #True
 doSummaryPlots          = True
 
 savePlots               = True
 makePlotTarball         = False
-fig_tuple               = (17, 10)  # figure size
-plotFormat              = ".pdf"    # savefig extension
+fig_tuple               = (15, 7)   # figure size
+plotFormat              = ".png"    # savefig extension
 plotDpi                 = 300       # savefig dpi
 myfontsize              = 16        # fontsize for plots
 n_skip                  = 1         # range step @ todo should be hardcoded?

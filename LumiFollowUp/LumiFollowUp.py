@@ -22,13 +22,14 @@ BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_befo
 sys.path.append(BIN)
 
 ## Where the code is:
-BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/autoScriptTesting/")
+BIN = os.path.expanduser("/afs/cern.ch/user/l/lumimod/lumimod/a2017_luminosity_followup/")
 sys.path.append(BIN)
 
 import matplotlib
 matplotlib.use('Agg')  #### needed for batch jobs
 print("# LumiFollowUp - Setting Matplotlib Backend to Agg.")
 import matplotlib.pyplot as pl
+from matplotlib.ticker import MultipleLocator
 
 import LHCMeasurementTools.LHC_BCT as BCT
 import LHCMeasurementTools.LHC_FBCT as FBCT
@@ -42,6 +43,7 @@ import LHCMeasurementTools.LHC_Lumi_bbb as LUMI_bbb
 import BSRT_calib_rescale as BSRT_calib
 import pandas as pd
 import numpy as np
+import numpy.ma as ma
 import pickle
 import time
 from operator import add
@@ -54,6 +56,7 @@ from datetime import datetime
 import argparse
 import socket
 import Utilities.readYamlDB as db
+import config
 
 
 class LumiFollowUp(object):
@@ -367,7 +370,7 @@ class LumiFollowUp(object):
                  y_mat : array of y-axis values for which the std and mean will be Calculated
                  color : the color for the lines
                  alpha : the alpha of the lines
-        Returns: None -- simply adds stuff on the given plt.axis
+        Returns: None -- simply adds stuff on the given pl.axis
         '''
         avg = np.mean(ymat, axis=1)
         std = np.std(ymat, axis=1)
@@ -531,235 +534,956 @@ class LumiFollowUp(object):
                 t_ref : reference time for cycle
         Returns: None
         '''
+
+        def getFilledSlotsArray(dict_intervals_two_beams, beam, cycle, cycleTime,  mask_invalid=True):
+            '''
+            Returns the array with the filled slots.
+            Inputs : beam           : beam string ('beam_1', 'beam_2')
+                     cycle          : cycle string ('injection', 'flattop')
+                     cycleTime      : cycle step string ('injection_start', 'injection_end', 'flattop_start', 'flattop_end')
+                     mask_invalid   : boolean True/False to mask invalid values in the output array
+            Returns: filled_slots array
+            '''
+            return ma.masked_invalid(dict_intervals_two_beams[beam][cycle]['filled_slots'])
+
+
+
+        # ms.mystyle_arial(self.myfontsize)
+        # list_figs = []
+
+
+
+        ##### BBB Emittances
+        info('#makeCyclePlots : Fill {} -> Making Cycle Emittances bbb plot...'.format(filln))
         pl.close('all')
-        ms.mystyle_arial(self.myfontsize)
-        list_figs = []
+        fig_bbbemit = pl.figure("Emittances", figsize=(14, 7))
+        fig_bbbemit.set_facecolor('w')
 
-        ##preapare empty figure for histograms
-        fig_emit_hist = pl.figure(1, figsize=(14,8))
-        fig_emit_hist.set_facecolor('w')
-        list_figs.append(fig_emit_hist)
-        sp_emit_hist_list = []
-        sptemp = None
-        for i_sp in range(4):
-            sptemp = pl.subplot(4,2,i_sp*2+1, sharex = sptemp)
-            sp_emit_hist_list.append(sptemp)
-        sp_inten_hist_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(4,2,i_sp*2+2, sharex = sptemp)
-            sp_inten_hist_list.append(sptemp)
-        sp_bright_hist_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(4,2,i_sp*2+6, sharex = sptemp)
-            sp_bright_hist_list.append(sptemp)
-
-        ##preapare empty figure bunch by bunch emit
-        fig_emit_bbb = pl.figure(2, figsize=(14, 8))
-        fig_emit_bbb.set_facecolor('w')
-        list_figs.append(fig_emit_bbb)
-        sp_emit_bbb_list = []
-        sptemp = None
-        for i_sp in xrange(4):
-            sptemp = pl.subplot(4,1,i_sp+1, sharex=sptemp, sharey=sptemp)
-            sp_emit_bbb_list.append(sptemp)
-
-        ##preapare empty figure bunch by bunch intensity
-        fig_inten_bbb = pl.figure(3, figsize=(14, 8))
-        fig_inten_bbb.set_facecolor('w')
-        list_figs.append(fig_inten_bbb)
-        sp_inten_bbb_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
-            sp_inten_bbb_list.append(sptemp)
-
-        ##preapare empty figure bunch by bunch brightness
-        fig_bright_bbb = pl.figure(4, figsize=(14, 8))
-        fig_bright_bbb.set_facecolor('w')
-        list_figs.append(fig_bright_bbb)
-        sp_bright_bbb_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
-            sp_bright_bbb_list.append(sptemp)
+        # emit_b1_h_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))
+        # emit_b1_v_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))
+        #
+        # emit_b2_h_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))
+        # emit_b2_v_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))
+        #
+        # emit_b1_h_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))
+        # emit_b1_v_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))
+        #
+        # emit_b2_h_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))
+        # emit_b2_v_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))
+        #
+        # # flattop
+        # emit_b1_h_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))
+        # emit_b1_v_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))
+        #
+        # emit_b2_h_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))
+        # emit_b2_v_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))
+        #
+        # emit_b1_h_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith']))
+        # emit_b1_v_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv']))
+        #
+        # emit_b2_h_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith']))
+        # emit_b2_v_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv']))
 
 
-        ##preapare empty figure bunch by bunch time
-        fig_time_bbb = pl.figure(6, figsize=(14, 8))
-        fig_time_bbb.set_facecolor('w')
-        list_figs.append(fig_time_bbb)
-        sp_time_bbb_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
-            sp_time_bbb_list.append(sptemp)
+        ax_b1_h = pl.subplot(4,1,1, sharex=None,       sharey=None)
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1 -  H
+        ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b1_h.set_ylabel("B1 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b1_h.minorticks_on()
+        ax_b1_h.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b1_h.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
 
-        ##preapare empty figure bunch by bunch intensity
-        fig_blength_bbb = pl.figure(8, figsize=(14, 8))
-        fig_blength_bbb.set_facecolor('w')
-        list_figs.append(fig_blength_bbb)
-        sp_blength_bbb_list = []
-        sptemp = None
-        for i_sp in range(2):
-            sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
-            sp_blength_bbb_list.append(sptemp)
+        ## Shrink current axis by 20%
+        box = ax_b1_h.get_position()
+        ax_b1_h.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1_h.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1_h.grid('on', which='both')
 
-        for beam_n in [1, 2]:
-            dict_intervals = dict_intervals_two_beams['beam_{}'.format(beam_n)]
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1 -  V
 
-            n_bins_emit = 50  ## @TODO PUT IT ON TOP?
-            list_labels = ['Injected', 'Start Ramp', 'End Ramp', 'Start SB']
+        ax_b1_v = pl.subplot(4,1,2, sharex=ax_b1_h,    sharey=ax_b1_h)
 
-            ## emittance plots
-            info("# makeCyclePlots : Making Emittance Cycle Plots for fill {}".format(filln))
-            for i_plane, plane in enumerate(['h', 'v']):
-                i_sp = (beam_n-1)*2+i_plane
-                i_label = 0
-                for interval in ['Injection', 'he_before_SB']:
-                    for moment in ['at_start', 'at_end']:
-                        masknan = ~np.isnan(np.array(dict_intervals[interval][moment]['emit'+plane]))
-                        debug("# makeCyclePlots : In plane loop: {} {} {} {} ".format(interval, moment, np.sum(dict_intervals[interval][moment]['emit'+plane]), np.sum(~masknan)))
-                        hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan], range =(0,5), bins=n_bins_emit)
+        ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",  "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",  "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b1_v.set_ylabel("B1 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b1_v.minorticks_on()
+        ax_b1_v.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b1_v.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+        ## Shrink current axis by 20%
+        box = ax_b1_v.get_position()
+        ax_b1_v.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1_v.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1_v.grid('on', which='both')
 
-                        sp_emit_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.1f um'%np.mean(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan]), linewidth=1)
-                        sp_emit_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['emit'+plane])[masknan], '.', label=list_labels[i_label]+', Avg. %.1f um'%np.mean(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan]))
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2  - H
+        ax_b2_h = pl.subplot(4,1,3, sharex=ax_b1_v,    sharey=ax_b1_v)
 
-                        i_label+=1
-                sp_emit_hist_list[i_sp].set_xlabel('Beam %d, Emittance %s [$\mu$m]'%(beam_n, plane))
-                sp_emit_hist_list[i_sp].set_ylabel('Occurrences')
-                sp_emit_hist_list[i_sp].grid('on')
-                sp_emit_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
-                sp_emit_hist_list[i_sp].xaxis.labelpad = 1
-                sp_emit_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",  "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",  "at_end",     mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b2_h.set_ylabel("B2 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b2_h.minorticks_on()
+        ax_b2_h.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b2_h.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+        ## Shrink current axis by 20%
+        box = ax_b2_h.get_position()
+        ax_b2_h.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2_h.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2_h.grid('on', which='both')
 
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2  - V
+        ax_b2_v = pl.subplot(4,1,4, sharex=ax_b2_h,    sharey=ax_b2_h)
 
-                sp_emit_bbb_list[i_sp].set_ylabel('B%d, Emitt. %s [$\mu$m]'%(beam_n, plane))
-                sp_emit_bbb_list[i_sp].grid('on')
-                sp_emit_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
-                sp_emit_bbb_list[i_sp].xaxis.labelpad = 1
+        ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",  "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",  "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b2_v.set_ylabel("B2 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b2_v.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b2_v.minorticks_on()
+        ax_b2_v.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b2_v.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+        ## Shrink current axis by 20%
+        box = ax_b2_v.get_position()
+        ax_b2_v.set_position([box.x0, box.y0, box.width * 0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2_v.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2_v.grid('on', which='both')
 
-            ##intensity plots
-            info("# makeCyclePlots : Making Intensity Cycle Plots for fill {}".format(filln))
-            i_label = 0
-            i_sp = beam_n-1
-            n_bins_inten = 50
-            for interval in ['Injection', 'he_before_SB']:
-                    for moment in ['at_start', 'at_end']:
-                        sp_inten_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['intensity'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['intensity'])[masknan])/1e11))
-                        hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['intensity'])[masknan], range =(0.5e11,1.5e11), bins=n_bins_inten)
-                        sp_inten_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['intensity'])[masknan])/1e11), linewidth=1)
-                        i_label+=1
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
 
-            sp_inten_bbb_list[i_sp].set_ylabel('Beam %d, Intensity [p/b]'%(beam_n))
-            sp_inten_bbb_list[i_sp].grid('on')
-            sp_inten_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_inten_bbb_list[i_sp].xaxis.labelpad = 1
-            sp_inten_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        fig_bbbemit.suptitle(subtitle, fontsize=16, fontweight='bold')
 
-            sp_inten_hist_list[i_sp].set_xlabel('Beam %d, Intensity [p/b]'%(beam_n))
-            sp_inten_hist_list[i_sp].set_ylabel('Occurrences')
-            sp_inten_hist_list[i_sp].grid('on')
-            sp_inten_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_inten_hist_list[i_sp].xaxis.labelpad = 1
-            sp_inten_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
-
-
-            ##blength plots
-            info("# makeCyclePlots : Making Bunch Length Cycle Plots for fill {}".format(filln))
-            i_label = 0
-            i_sp = beam_n-1
-            for interval in ['Injection', 'he_before_SB']:
-                    for moment in ['at_start', 'at_end']:
-                        sp_blength_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['blength'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['blength'])[masknan])/1e11))
-                        i_label+=1
-
-            sp_blength_bbb_list[i_sp].set_ylabel('Beam {}, b. length [p/b]'.format(beam_n))
-            sp_blength_bbb_list[i_sp].grid('on')
-            sp_blength_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_blength_bbb_list[i_sp].xaxis.labelpad = 1
-            sp_blength_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
-
-
-            ## plot brightness
-            info("# makeCyclePlots : Making Brightness Cycle Plots for fill {}".format(filln))
-            i_label = 0
-            i_sp = beam_n-1
-            for interval in ['Injection', 'he_before_SB']:
-                for moment in ['at_start', 'at_end']:
-                        sp_bright_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['brightness'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['brightness'])[masknan])/1e11))
-                        hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['brightness'])[masknan], range =(0,1e11), bins=n_bins_inten)
-                        sp_bright_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['brightness'])[masknan])/1e11), linewidth=1)
-                        i_label+=1
-
-            sp_bright_bbb_list[i_sp].set_ylabel('Beam {}, Brightness [p/$\mu$m/b]'.format(beam_n))
-            sp_bright_bbb_list[i_sp].grid('on')
-            sp_bright_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_bright_bbb_list[i_sp].xaxis.labelpad = 1
-            sp_bright_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
-
-            sp_bright_hist_list[i_sp].set_xlabel('Beam {}, Brightness [p/$\mu$m]'.format(beam_n))
-            sp_bright_hist_list[i_sp].set_ylabel('Occurrences')
-            sp_bright_hist_list[i_sp].grid('on')
-            sp_bright_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_bright_hist_list[i_sp].xaxis.labelpad = 1
-            sp_bright_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
-
-            ## plot time
-            info("# makeCyclePlots : Making Time Cycle Plots for fill {}".format(filln))
-            i_label = 0
-            i_sp = beam_n-1
-            for interval in ['Injection', 'he_before_SB']:
-                        sp_time_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], (np.array(dict_intervals[interval]['at_end']['time_meas'])[masknan]-np.array(dict_intervals[interval]['at_start']['time_meas'])[masknan])/60. , '.',
-                                                    label=', Avg. %.2f'%(np.mean(np.array(dict_intervals[interval]['at_end']['time_meas'])[masknan]-np.array(dict_intervals[interval]['at_start']['time_meas'])[masknan])/60.))
-
-            sp_time_bbb_list[i_sp].set_ylabel('Beam {}, Time start to end [min]'.format(beam_n))
-            sp_time_bbb_list[i_sp].grid('on')
-            sp_time_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
-            sp_time_bbb_list[i_sp].xaxis.labelpad = 1
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_emittancesbbb_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
 
 
-        sp_emit_bbb_list[-1].set_xlabel('25 ns slot')
-        sp_emit_bbb_list[-1].set_ylim(1., 5.)
+        #################
+        pl.close('all')
+        info('#makeCyclePlots : Fill {} -> Making Cycle Intensities bbb plot...'.format(filln))
+        fig_bbbintens = pl.figure("Intensities", figsize=(14, 7))
+        fig_bbbintens.set_facecolor('w')
+        # # injection
+        # intens_b1_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))
+        # intens_b2_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))
+        # intens_b1_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  ))
+        # intens_b2_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']  ))
+        #
+        #
+        # # flattop
+        # intens_b1_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))
+        # intens_b2_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))
+        # intens_b1_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']  ))
+        # intens_b2_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']  ))
 
-        sp_inten_bbb_list[-1].set_xlabel('25 ns slot')
-        for sp in sp_emit_hist_list + sp_emit_bbb_list + sp_inten_bbb_list + sp_emit_bbb_list + sp_bright_bbb_list + sp_inten_hist_list +sp_bright_hist_list +sp_time_bbb_list:
-            sp.legend(bbox_to_anchor=(1, 1),  loc='upper left', prop={'size':self.myfontsize})
 
-        fig_emit_hist.subplots_adjust(left=.09, bottom=.07, right=.76, top=.92, wspace=1., hspace=.55)
-        tref_string = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(t_ref))
-        for fig in list_figs:
-            fig.suptitle('Fill {}: started on {}'.format(filln, tref_string), fontsize=self.myfontsize)
+        ax_b1 = pl.subplot(2,1,1, sharex=None,       sharey=None)
 
-            if fig is fig_emit_hist:
-                continue
-            fig.subplots_adjust(left=.05, right=.81, top=.93)
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  )),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",      mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']  )),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b1.set_ylabel("B1 Intensity [ppb]", fontsize=14, fontweight='bold')
+        ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b1.minorticks_on()
+        ax_b1.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  ))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  ))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']  ))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']  )))), horizontalalignment='center', verticalalignment='top', transform=ax_b1.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
 
-        if not self.batch:
-            pl.show()
+        ## Shrink current axis by 20%
+        box = ax_b1.get_position()
+        ax_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1.grid('on', which='both')
+        ax_b1.set_ylim(0.5e11, 1.7e11)
 
-        if self.savePlots:
-            timeString = datetime.now().strftime("%Y%m%d")
-            saveString = timeString+self.plotFormat
-            plot_dir   = self.plot_dir.replace('<FILLNUMBER>',str(filln))
-            savename   = plot_dir+'fill_{}_cycle_EmittanceHist_{}'.format(filln, saveString)
-            fig_emit_hist.savefig(savename, dpi=self.plotDpi)
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2
+        ax_b2 = pl.subplot(2,1,2, sharex=ax_b1,    sharey=ax_b1)
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']  )),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_start",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",      mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']  )),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b2.set_ylabel("B2 Intensity [ppb]", fontsize=14, fontweight='bold')
+        ax_b2.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b2.minorticks_on()
+        ax_b2.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']  ))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']  ))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']  ))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']  )))), horizontalalignment='center', verticalalignment='center', transform=ax_b2.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
 
-            savename   = plot_dir+'fill_{}_cycle_bbbEmittance_{}'.format(filln, saveString)
-            fig_emit_bbb.savefig(savename, dpi=self.plotDpi)
+        ## Shrink current axis by 20%
+        box = ax_b2.get_position()
+        ax_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2.grid('on', which='both')
+        ax_b2.set_ylim(0.5e11, 1.7e11)
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
 
-            savename   = plot_dir+'fill_{}_cycle_bbbIntensity_{}'.format(filln, saveString)
-            fig_inten_bbb.savefig(savename, dpi=self.plotDpi)
+        fig_bbbintens.suptitle(subtitle, fontsize=16, fontweight='bold')
 
-            savename   = plot_dir+'fill_{}_cycle_bbbBrightness_{}'.format(filln, saveString)
-            fig_bright_bbb.savefig(savename, dpi=self.plotDpi)
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_intensitiesbbb_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
 
-            savename   = plot_dir+'fill_{}_cycle_bbbTime_{}'.format(filln, saveString)
-            fig_time_bbb.savefig(savename, dpi=self.plotDpi)
+        ##########
+        pl.close('all')
+        info('#makeCyclePlots : Fill {} -> Making Cycle Brightness bbb plot...'.format(filln))
+        fig_bbbbright = pl.figure("Brightness", figsize=(14, 7))
+        fig_bbbbright.set_facecolor('w')
+        # injection
+        # bright_b1_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))
+        # bright_b2_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))
+        # bright_b1_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))
+        # bright_b2_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))
+        #
+        #
+        # # flattop
+        # bright_b1_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))
+        # bright_b2_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness']))
+        # bright_b1_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness']))
+        # bright_b2_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness']))
 
-            savename   = plot_dir+'fill_{}_cycle_bbbBLength_{}'.format(filln, saveString)
-            fig_blength_bbb.savefig(savename, dpi=self.plotDpi)
+
+        ax_b1 = pl.subplot(2,1,1, sharex=None,       sharey=None)
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b1.set_ylabel("B1 Brightness [p/$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b1.minorticks_on()
+        ax_b1.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b1.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+
+        ## Shrink current axis by 20%
+        box = ax_b1.get_position()
+        ax_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1.grid('on', which='both')
+
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2
+        ax_b2 = pl.subplot(2,1,2, sharex=ax_b1,    sharey=ax_b1)
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b2.set_ylabel("B2 Brightness [p/$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
+        ax_b2.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b2.minorticks_on()
+        ax_b2.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness'])))), horizontalalignment='center', verticalalignment='center', transform=ax_b2.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+
+        ## Shrink current axis by 20%
+        box = ax_b2.get_position()
+        ax_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2.grid('on', which='both')
+
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
+
+        fig_bbbbright.suptitle(subtitle, fontsize=16, fontweight='bold')
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_brightnessbbb_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
+
+
+
+        #################### ------- #
+        pl.close('all')
+        info('#makeCyclePlots : Fill {} -> Making Cycle Bunch Length bbb plot...'.format(filln))
+        fig_bbbblength = pl.figure("blength", figsize=(14, 7))
+        fig_bbbblength.set_facecolor('w')
+        # injection
+        # blength_b1_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))
+        # blength_b2_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))
+        # blength_b1_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))
+        # blength_b2_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength']))
+        #
+        #
+        # # flattop
+        # blength_b1_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength']))
+        # blength_b2_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength']))
+        # blength_b1_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength']))
+        # blength_b2_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength']))
+
+
+        ax_b1 = pl.subplot(2,1,1, sharex=None,       sharey=None)
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b1.set_ylabel("B1 Bunch Length [p/b]", fontsize=12, fontweight='bold')
+        ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b1.minorticks_on()
+        ax_b1.text(0.5, 0.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength'])))), horizontalalignment='center', verticalalignment='top', transform=ax_b1.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+
+        ## Shrink current axis by 20%
+        box = ax_b1.get_position()
+        ax_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1.grid('on', which='both')
+        ax_b1.set_ylim(0.5e-09, 1.5e-09)
+
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2
+        ax_b2 = pl.subplot(2,1,2, sharex=ax_b1,    sharey=ax_b1)
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength'])), '.', color='blue',   markersize=8, label='Injected')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength'])),   '.', color='orange', markersize=8, label='Start Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength'])),  '.', color='green',  markersize=8, label='End Ramp')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength'])),    '.', color='red',    markersize=8, label='Start SB')
+        ax_b2.set_ylabel("B2 Bunch Length [p/b]", fontsize=12, fontweight='bold')
+        ax_b2.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b2.minorticks_on()
+        ax_b2.text(0.5, 0.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength'])))), horizontalalignment='center', verticalalignment='center', transform=ax_b2.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=9)
+
+        ## Shrink current axis by 20%
+        box = ax_b2.get_position()
+        ax_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2.grid('on', which='both')
+        ax_b2.set_ylim(0.5e-09, 1.5e-09)
+
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
+
+        fig_bbbblength.suptitle(subtitle, fontsize=16, fontweight='bold')
+
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_blengthbbb_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
+
+
+
+
+        #####-----
+        pl.close('all')
+        info('#makeCyclePlots : Fill {} -> Making Cycle Time bbb plot...'.format(filln))
+        fig_bbbtime = pl.figure("time", figsize=(14, 7))
+        fig_bbbtime.set_facecolor('w')
+        # injection
+        time_b1_inj_atStart = np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['time_meas'])
+        time_b2_inj_atStart = np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['time_meas'])
+        time_b1_inj_atEnd   = np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['time_meas'])
+        time_b2_inj_atEnd   = np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['time_meas'])
+
+
+        # flattop
+        time_b1_ft_atStart = np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['time_meas'])
+        time_b2_ft_atStart = np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['time_meas'])
+        time_b1_ft_atEnd   = np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['time_meas'])
+        time_b2_ft_atEnd   = np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['time_meas'])
+
+
+        time_b1_inj = (time_b1_inj_atEnd - time_b1_inj_atStart)/60.
+        time_b1_ft  = (time_b1_ft_atEnd  - time_b1_ft_atStart)/60.
+        time_b2_inj = (time_b2_inj_atEnd - time_b2_inj_atStart)/60.
+        time_b2_ft  = (time_b2_ft_atEnd  - time_b2_ft_atStart)/60.
+
+        mean_time_b1_inj = np.nanmean(time_b1_inj)
+        mean_time_b1_ft  = np.nanmean(time_b1_ft)
+        mean_time_b2_inj = np.nanmean(time_b2_inj)
+        mean_time_b2_ft  = np.nanmean(time_b2_ft)
+
+        std_time_b1_inj = (np.nanstd(time_b1_inj_atStart) + np.nanstd(time_b1_inj_atEnd))/60.
+        std_time_b1_ft  = (np.nanstd(time_b1_ft_atStart) + np.nanstd(time_b1_ft_atEnd))/60.
+
+        std_time_b2_inj = (np.nanstd(time_b2_inj_atStart) + np.nanstd(time_b2_inj_atEnd))/60.
+        std_time_b2_ft  = (np.nanstd(time_b2_ft_atStart) + np.nanstd(time_b2_ft_atEnd))/60.
+
+        ax_b1 = pl.subplot(2,1,1, sharex=None,       sharey=None)
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 1
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",  "at_start",  mask_invalid=True), time_b1_inj, '.', color='blue',   markersize=8, label='Injection')
+        ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",      mask_invalid=True), time_b1_ft,    '.', color='red',    markersize=8, label='Flat Top')
+        ax_b1.set_ylabel("B1 Time [min]", fontsize=12, fontweight='bold')
+        ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b1.minorticks_on()
+        ax_b1.text(0.5, 0.9, "Injection: {:.2f}$\pm${:.2f} | Flat Top : {:.2f}$\pm${:.2f}".format(mean_time_b1_inj, std_time_b1_inj,mean_time_b1_ft,std_time_b1_ft ),
+
+                #(np.mean(time_b1_inj)/60., (np.std(time_b1_inj_atEnd)+np.std(time_b1_inj_atStart))/60.,
+                #        np.mean(time_b1_ft_atEnd - time_b1_ft_atStart)/60.), (np.std(time_b1_ft_atEnd)+np.std(time_b1_ft_atStart))/60.),
+                        horizontalalignment='center', verticalalignment='top', transform=ax_b1.transAxes,
+                        bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=12)
+
+        ## Shrink current axis by 20%
+        box = ax_b1.get_position()
+        ax_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b1.grid('on', which='both')
+
+
+        # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
+        # beam 2
+        ax_b2 = pl.subplot(2,1,2, sharex=ax_b1,       sharey=ax_b1)
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",  "at_start",  mask_invalid=True), (time_b2_inj_atEnd-time_b2_inj_atStart)/60., '.', color='blue',   markersize=8, label='Injection')
+        ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",      mask_invalid=True), (time_b2_ft_atEnd-time_b2_ft_atStart)/60.,    '.', color='red',    markersize=8, label='Flat Top')
+        ax_b2.set_ylabel("B2 Time [min]", fontsize=12, fontweight='bold')
+        ax_b2.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+        ax_b2.minorticks_on()
+        ax_b2.text(0.5, 0.9, "Injection: {:.2f}$\pm${:.2f} | Flat Top : {:.2f}$\pm${:.2f}".format(mean_time_b2_inj, std_time_b2_inj,mean_time_b2_ft,std_time_b2_ft ),
+            #(np.mean(time_b2_inj_atEnd - time_b2_inj_atStart)/60., (np.std(time_b2_inj_atEnd)+np.std(time_b2_inj_atStart))/60.,
+            #            np.mean(time_b2_ft_atEnd - time_b2_ft_atStart)/60.), (np.std(time_b2_ft_atEnd)+np.std(time_b2_ft_atStart))/60.),
+                        horizontalalignment='center', verticalalignment='top', transform=ax_b2.transAxes,
+                        bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=12)
+
+        ## Shrink current axis by 20%
+        box = ax_b2.get_position()
+        ax_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14)
+        ax_b2.grid('on', which='both')
+
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
+
+        fig_bbbtime.suptitle(subtitle, fontsize=16, fontweight='bold')
+
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_timebbb_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
+
+        ## ---
+        pl.close('all')
+        info('#makeCyclePlots : Fill {} -> Making Cycle Histograms bbb plot...'.format(filln))
+        fig_hist = pl.figure("Histograms", figsize=(18, 9))
+        fig_hist.clf()
+        fig_hist.set_facecolor('w')
+        ##### EMITTANCES
+        # injection
+        # emit_b1_h_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))
+        # emit_b1_v_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))
+        #
+        # emit_b2_h_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))
+        # emit_b2_v_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))
+        #
+        # emit_b1_h_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))
+        # emit_b1_v_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))
+        #
+        # emit_b2_h_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))
+        # emit_b2_v_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))
+        #
+        # # flattop
+        # emit_b1_h_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))
+        # emit_b1_v_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))
+        #
+        # emit_b2_h_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))
+        # emit_b2_v_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))
+        #
+        # emit_b1_h_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith']))
+        # emit_b1_v_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv']))
+        #
+        # emit_b2_h_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith']))
+        # emit_b2_v_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv']))
+        #
+        # ##### INTENSITIES
+        # # injection
+        # intens_b1_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))
+        # intens_b2_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))
+        # intens_b1_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']))
+        # intens_b2_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']))
+        #
+        #
+        # # flattop
+        # intens_b1_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))
+        # intens_b2_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))
+        # intens_b1_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']))
+        # intens_b2_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']))
+        #
+        # ##### BRIGHTNESSES
+        # # injection
+        # bright_b1_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))
+        # bright_b2_inj_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))
+        # bright_b1_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))
+        # bright_b2_inj_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))
+        #
+        #
+        # # flattop
+        # bright_b1_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))
+        # bright_b2_ft_atStart = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness']))
+        # bright_b1_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness']))
+        # bright_b2_ft_atEnd   = ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness']))
+
+        ax_emit_b1_h = pl.subplot(4,2,1, sharex=None,       sharey=None)
+        ax_emit_b1_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith'])),    range=(0, 5),   bins=50, color='blue',   histtype='step', lw=2,  label='Injected')
+        ax_emit_b1_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith'])),      range=(0, 5),   bins=50, color='orange', histtype='step', lw=2,  label='Start Ramp')
+        ax_emit_b1_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith'])),     range=(0, 5),   bins=50, color='green',  histtype='step', lw=2,  label='End Ramp')
+        ax_emit_b1_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])),       range=(0, 5),   bins=50, color='red',    histtype='step', lw=2,  label='Start SB')
+        ax_emit_b1_h.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_emit_b1_h.set_xlabel('B1 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        # ax_emit_b1_h.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_emit_b1_h.get_position()
+        ax_emit_b1_h.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_emit_b1_h.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_emit_b1_h.grid('on', which='both')
+        ax_emit_b1_h.text(0.5, 1.1, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])))), horizontalalignment='center', verticalalignment='center', transform=ax_emit_b1_h.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+
+
+        ax_emit_b1_v = pl.subplot(4,2,3, sharex=None,       sharey=None)
+        ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv'])),    range=(0, 5),   bins=50, color='blue',    histtype='step', lw=2, label='Injected')
+        ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv'])),      range=(0, 5),   bins=50, color='orange',  histtype='step', lw=2, label='Start Ramp')
+        ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv'])),     range=(0, 5),   bins=50, color='green',   histtype='step', lw=2, label='End Ramp')
+        ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv'])),       range=(0, 5),   bins=50, color='red',     histtype='step', lw=2, label='Start SB')
+        ax_emit_b1_v.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_emit_b1_v.set_xlabel('B1 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        ax_emit_b1_v.text(0.5, 1.1, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv'])))), horizontalalignment='center', verticalalignment='center', transform=ax_emit_b1_v.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_emit_b1_v.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_emit_b1_v.get_position()
+        ax_emit_b1_v.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_emit_b1_v.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_emit_b1_v.grid('on', which='both')
+
+
+        ax_emit_b2_h = pl.subplot(4,2,5, sharex=None,       sharey=None)
+        ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith'])),    range=(0, 5),   bins=50, color='blue',   histtype='step', lw=2, label='Injected')
+        ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith'])),      range=(0, 5),   bins=50, color='orange', histtype='step', lw=2, label='Start Ramp')
+        ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith'])),     range=(0, 5),   bins=50, color='green',  histtype='step', lw=2, label='End Ramp')
+        ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith'])),       range=(0, 5),   bins=50, color='red',    histtype='step', lw=2, label='Start SB')
+        ax_emit_b2_h.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_emit_b2_h.set_xlabel('B2 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        ax_emit_b2_h.text(0.5, 1.1, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith'])))), horizontalalignment='center', verticalalignment='center', transform=ax_emit_b2_h.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_emit_b2_h.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_emit_b2_h.get_position()
+        ax_emit_b2_h.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_emit_b2_h.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_emit_b2_h.grid('on', which='both')
+
+        ax_emit_b2_v = pl.subplot(4,2,7, sharex=ax_emit_b1_h,       sharey=ax_emit_b1_h)
+        ax_emit_b2_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv'])),    range=(0, 5),   bins=50, color='blue',    histtype='step', lw=2, label='Injected')
+        ax_emit_b2_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv'])),      range=(0, 5),   bins=50, color='orange',  histtype='step', lw=2, label='Start Ramp')
+        ax_emit_b2_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv'])),     range=(0, 5),   bins=50, color='green',   histtype='step', lw=2, label='End Ramp')
+        ax_emit_b2_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv'])),       range=(0, 5),   bins=50, color='red',     histtype='step', lw=2, label='Start SB')
+        ax_emit_b2_v.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_emit_b2_v.set_xlabel('B2 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        ax_emit_b2_v.text(0.5, 1.1, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emitv'])))), horizontalalignment='center', verticalalignment='center', transform=ax_emit_b2_v.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_emit_b2_v.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_emit_b2_v.get_position()
+        ax_emit_b2_v.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_emit_b2_v.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_emit_b2_v.grid('on', which='both')
+
+        ##### ==== Intensities
+        ax_intens_b1 = pl.subplot(4,2,2, sharex=None,       sharey=None)
+        ax_intens_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity'])),    range=(0.0e11, 1.5e11),   bins=50, color='blue',   histtype='step', lw=2, label='Injected')
+        ax_intens_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity'])),      range=(0.0e11, 1.5e11),   bins=50, color='orange', histtype='step', lw=2, label='Start Ramp')
+        ax_intens_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity'])),     range=(0.0e11, 1.5e11),   bins=50, color='green',  histtype='step', lw=2, label='End Ramp')
+        ax_intens_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity'])),       range=(0.0e11, 1.5e11),   bins=50, color='red',    histtype='step', lw=2, label='Start SB')
+        ax_intens_b1.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_intens_b1.set_xlabel('B1 Intensity [ppb]', fontweight='bold', fontsize=8)
+        ax_intens_b1.text(0.6, 1.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity'])))), horizontalalignment='center', verticalalignment='center', transform=ax_intens_b1.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_intens_b1.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_intens_b1.get_position()
+        ax_intens_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_intens_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_intens_b1.grid('on', which='both')
+
+
+        ax_intens_b2 = pl.subplot(4,2,4, sharex=None,       sharey=None)
+        ax_intens_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity'])),    range=(0.0e11, 1.5e11),   bins=50, color='blue',   histtype='step', lw=2, label='Injected')
+        ax_intens_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity'])),      range=(0.0e11, 1.5e11),   bins=50, color='orange', histtype='step', lw=2, label='Start Ramp')
+        ax_intens_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity'])),     range=(0.0e11, 1.5e11),   bins=50, color='green',  histtype='step', lw=2, label='End Ramp')
+        ax_intens_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity'])),       range=(0.0e11, 1.5e11),   bins=50, color='red',    histtype='step', lw=2, label='Start SB')
+        ax_intens_b2.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_intens_b2.set_xlabel('B2 Intensity [ppb]', fontweight='bold', fontsize=8)
+        ax_intens_b2.text(0.6, 1.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['intensity']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['intensity'])))), horizontalalignment='center', verticalalignment='center', transform=ax_intens_b2.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_intens_b2.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_intens_b2.get_position()
+        ax_intens_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_intens_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_intens_b2.grid('on', which='both')
+
+        ##### ==== Brightness
+        ax_bright_b1 = pl.subplot(4,2,6, sharex=None,       sharey=None)
+        ax_bright_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness'])),    range=(0.0e11, 1.5e11),   bins=50, color='blue',   histtype='step', lw=2, label='Injected')
+        ax_bright_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness'])),      range=(0.0e11, 1.5e11),   bins=50, color='orange', histtype='step', lw=2, label='Start Ramp')
+        ax_bright_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness'])),     range=(0.0e11, 1.5e11),   bins=50, color='green',  histtype='step', lw=2, label='End Ramp')
+        ax_bright_b1.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness'])),       range=(0.0e11, 1.5e11),   bins=50, color='red',    histtype='step', lw=2, label='Start SB')
+        ax_bright_b1.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_bright_b1.set_xlabel('B1 Brightness [p/$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        ax_bright_b1.text(0.6, 1.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness'])))), horizontalalignment='center', verticalalignment='center', transform=ax_bright_b1.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_bright_b1.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_bright_b1.get_position()
+        ax_bright_b1.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_bright_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_bright_b1.grid('on', which='both')
+
+
+        ax_bright_b2 = pl.subplot(4,2,8, sharex=None,       sharey=None)
+        ax_bright_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness'])),    range=(0.0e11, 1.5e11),   bins=50, color='blue',   histtype='step',lw=2, label='Injected')
+        ax_bright_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness'])),      range=(0.0e11, 1.5e11),   bins=50, color='orange', histtype='step',lw=2, label='Start Ramp')
+        ax_bright_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['brightness'])),     range=(0.0e11, 1.5e11),   bins=50, color='green',  histtype='step',lw=2, label='End Ramp')
+        ax_bright_b2.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness'])),       range=(0.0e11, 1.5e11),   bins=50, color='red',    histtype='step',lw=2, label='Start SB')
+        ax_bright_b2.set_ylabel('Entries', fontweight='bold', fontsize=8)
+        ax_bright_b2.set_xlabel('B2 Brightness [p/$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
+        ax_bright_b2.text(0.6, 1.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness']))),
+                       np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness']))),   np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['brightness'])))), horizontalalignment='center', verticalalignment='center', transform=ax_bright_b2.transAxes,
+                       bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
+        # ax_bright_b2.minorticks_on()
+        ## Shrink current axis by 20%
+        box = ax_bright_b2.get_position()
+        ax_bright_b2.set_position([box.x0, box.y0, box.width*0.9, box.height])
+        # Put a legend to the right of the current axis
+        ax_bright_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
+        ax_bright_b2.grid('on', which='both')
+
+        pl.subplots_adjust(left=0.1, wspace=0.5, hspace=0.7)
+
+
+        # tref string
+        tref_string = datetime.fromtimestamp(t_ref)
+        subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
+        fig_hist.suptitle(subtitle, fontsize=16, fontweight='bold')
+
+        if config.savePlots:
+            timestr  = datetime.now().strftime("%Y%m%d")
+            filename = config.stableBeams_folder+config.fill_dir.replace("<FILLNUMBER>", str(filln))+config.plot_dir+"fill_{}_cycle_histos_{}".format(filln, timestr)+config.plotFormat
+            pl.savefig(filename, dpi=config.plotDpi)
+
+        # ########## - -- -- - - - - - -- - -old plots
+        # ##preapare empty figure for histograms
+        # fig_emit_hist = pl.figure('histogram', figsize=(14,8))
+        # fig_emit_hist.set_facecolor('w')
+        # list_figs.append(fig_emit_hist)
+        # sp_emit_hist_list = []
+        # sptemp = None
+        # for i_sp in range(4):
+        #     sptemp = pl.subplot(4,2,i_sp*2+1, sharex = sptemp)
+        #     sp_emit_hist_list.append(sptemp)
+        # sp_inten_hist_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(4,2,i_sp*2+2, sharex = sptemp)
+        #     sp_inten_hist_list.append(sptemp)
+        # sp_bright_hist_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(4,2,i_sp*2+6, sharex = sptemp)
+        #     sp_bright_hist_list.append(sptemp)
+        #
+        # ##preapare empty figure bunch by bunch emit
+        # fig_emit_bbb = pl.figure('emittances_bbb', figsize=(14, 8))
+        # fig_emit_bbb.set_facecolor('w')
+        # list_figs.append(fig_emit_bbb)
+        # sp_emit_bbb_list = []
+        # sptemp = None
+        # for i_sp in xrange(4):
+        #     sptemp = pl.subplot(4,1,i_sp+1, sharex=sptemp, sharey=sptemp)
+        #     sp_emit_bbb_list.append(sptemp)
+        #
+        # ##preapare empty figure bunch by bunch intensity
+        # fig_inten_bbb = pl.figure('intensity_bbb', figsize=(14, 8))
+        # fig_inten_bbb.set_facecolor('w')
+        # list_figs.append(fig_inten_bbb)
+        # sp_inten_bbb_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
+        #     sp_inten_bbb_list.append(sptemp)
+        #
+        # ##preapare empty figure bunch by bunch brightness
+        # fig_bright_bbb = pl.figure('brightness_bbb', figsize=(14, 8))
+        # fig_bright_bbb.set_facecolor('w')
+        # list_figs.append(fig_bright_bbb)
+        # sp_bright_bbb_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
+        #     sp_bright_bbb_list.append(sptemp)
+        #
+        #
+        # ##preapare empty figure bunch by bunch time
+        # fig_time_bbb = pl.figure('time_bbb', figsize=(14, 8))
+        # fig_time_bbb.set_facecolor('w')
+        # list_figs.append(fig_time_bbb)
+        # sp_time_bbb_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
+        #     sp_time_bbb_list.append(sptemp)
+        #
+        # ##preapare empty figure bunch by bunch intensity
+        # fig_blength_bbb = pl.figure('blength_bbb', figsize=(14, 8))
+        # fig_blength_bbb.set_facecolor('w')
+        # list_figs.append(fig_blength_bbb)
+        # sp_blength_bbb_list = []
+        # sptemp = None
+        # for i_sp in range(2):
+        #     sptemp = pl.subplot(2,1,i_sp+1, sharex=sptemp, sharey=sptemp)
+        #     sp_blength_bbb_list.append(sptemp)
+        #
+        # for beam_n in [1, 2]:
+        #     dict_intervals = dict_intervals_two_beams['beam_{}'.format(beam_n)]
+        #
+        #     n_bins_emit = 50  ## @TODO PUT IT ON TOP?
+        #     list_labels = ['Injected', 'Start Ramp', 'End Ramp', 'Start SB']
+        #
+        #     ## emittance plots
+        #     info("# makeCyclePlots : Making Emittance Cycle Plots for fill {}".format(filln))
+        #     for i_plane, plane in enumerate(['h', 'v']):
+        #         i_sp = (beam_n-1)*2+i_plane
+        #         i_label = 0
+        #         for interval in ['Injection', 'he_before_SB']:
+        #             for moment in ['at_start', 'at_end']:
+        #                 masknan = ~np.isnan(np.array(dict_intervals[interval][moment]['emit'+plane]))
+        #                 debug("# makeCyclePlots : In plane loop: {} {} {} {} ".format(interval, moment, np.sum(dict_intervals[interval][moment]['emit'+plane]), np.sum(~masknan)))
+        #                 hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan], range =(0,5), bins=n_bins_emit)
+        #
+        #                 sp_emit_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.1f um'%np.mean(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan]), linewidth=1)
+        #                 sp_emit_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['emit'+plane])[masknan], '.', label=list_labels[i_label]+', Avg. %.1f um'%np.mean(np.array(dict_intervals[interval][moment]['emit'+plane])[masknan]))
+        #
+        #                 i_label+=1
+        #         sp_emit_hist_list[i_sp].set_xlabel('Beam %d, Emittance %s [$\mu$m]'%(beam_n, plane))
+        #         sp_emit_hist_list[i_sp].set_ylabel('Occurrences')
+        #         sp_emit_hist_list[i_sp].grid('on')
+        #         sp_emit_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #         sp_emit_hist_list[i_sp].xaxis.labelpad = 1
+        #         sp_emit_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #
+        #         sp_emit_bbb_list[i_sp].set_ylabel('B%d, Emitt. %s [$\mu$m]'%(beam_n, plane))
+        #         sp_emit_bbb_list[i_sp].grid('on')
+        #         sp_emit_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #         sp_emit_bbb_list[i_sp].xaxis.labelpad = 1
+        #
+        #     ##intensity plots
+        #     info("# makeCyclePlots : Making Intensity Cycle Plots for fill {}".format(filln))
+        #     i_label = 0
+        #     i_sp = beam_n-1
+        #     n_bins_inten = 50
+        #     for interval in ['Injection', 'he_before_SB']:
+        #             for moment in ['at_start', 'at_end']:
+        #                 sp_inten_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['intensity'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['intensity'])[masknan])/1e11))
+        #                 hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['intensity'])[masknan], range =(0.5e11,1.5e11), bins=n_bins_inten)
+        #                 sp_inten_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['intensity'])[masknan])/1e11), linewidth=1)
+        #                 i_label+=1
+        #
+        #     sp_inten_bbb_list[i_sp].set_ylabel('Beam %d, Intensity [p/b]'%(beam_n))
+        #     sp_inten_bbb_list[i_sp].grid('on')
+        #     sp_inten_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_inten_bbb_list[i_sp].xaxis.labelpad = 1
+        #     sp_inten_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #     sp_inten_hist_list[i_sp].set_xlabel('Beam %d, Intensity [p/b]'%(beam_n))
+        #     sp_inten_hist_list[i_sp].set_ylabel('Occurrences')
+        #     sp_inten_hist_list[i_sp].grid('on')
+        #     sp_inten_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_inten_hist_list[i_sp].xaxis.labelpad = 1
+        #     sp_inten_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #
+        #     ##blength plots
+        #     info("# makeCyclePlots : Making Bunch Length Cycle Plots for fill {}".format(filln))
+        #     i_label = 0
+        #     i_sp = beam_n-1
+        #     for interval in ['Injection', 'he_before_SB']:
+        #             for moment in ['at_start', 'at_end']:
+        #                 sp_blength_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['blength'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['blength'])[masknan])/1e11))
+        #                 i_label+=1
+        #
+        #     sp_blength_bbb_list[i_sp].set_ylabel('Beam {}, b. length [p/b]'.format(beam_n))
+        #     sp_blength_bbb_list[i_sp].grid('on')
+        #     sp_blength_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_blength_bbb_list[i_sp].xaxis.labelpad = 1
+        #     sp_blength_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #
+        #     ## plot brightness
+        #     info("# makeCyclePlots : Making Brightness Cycle Plots for fill {}".format(filln))
+        #     i_label = 0
+        #     i_sp = beam_n-1
+        #     for interval in ['Injection', 'he_before_SB']:
+        #         for moment in ['at_start', 'at_end']:
+        #                 sp_bright_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], np.array(dict_intervals[interval][moment]['brightness'])[masknan], '.', label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['brightness'])[masknan])/1e11))
+        #                 hist, bin_edges = np.histogram(np.array(dict_intervals[interval][moment]['brightness'])[masknan], range =(0,1e11), bins=n_bins_inten)
+        #                 sp_bright_hist_list[i_sp].step(bin_edges[:-1], hist, label=list_labels[i_label]+', Avg. %.2fe11'%(np.mean(np.array(dict_intervals[interval][moment]['brightness'])[masknan])/1e11), linewidth=1)
+        #                 i_label+=1
+        #
+        #     sp_bright_bbb_list[i_sp].set_ylabel('Beam {}, Brightness [p/$\mu$m/b]'.format(beam_n))
+        #     sp_bright_bbb_list[i_sp].grid('on')
+        #     sp_bright_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_bright_bbb_list[i_sp].xaxis.labelpad = 1
+        #     sp_bright_bbb_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #     sp_bright_hist_list[i_sp].set_xlabel('Beam {}, Brightness [p/$\mu$m]'.format(beam_n))
+        #     sp_bright_hist_list[i_sp].set_ylabel('Occurrences')
+        #     sp_bright_hist_list[i_sp].grid('on')
+        #     sp_bright_hist_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_bright_hist_list[i_sp].xaxis.labelpad = 1
+        #     sp_bright_hist_list[i_sp].ticklabel_format(style='sci', scilimits=(0,0),axis='y')
+        #
+        #     ## plot time
+        #     info("# makeCyclePlots : Making Time Cycle Plots for fill {}".format(filln))
+        #     i_label = 0
+        #     i_sp = beam_n-1
+        #     for interval in ['Injection', 'he_before_SB']:
+        #                 sp_time_bbb_list[i_sp].plot(np.array(dict_intervals[interval]['filled_slots'])[masknan], (np.array(dict_intervals[interval]['at_end']['time_meas'])[masknan]-np.array(dict_intervals[interval]['at_start']['time_meas'])[masknan])/60. , '.',
+        #                                             label=', Avg. %.2f'%(np.mean(np.array(dict_intervals[interval]['at_end']['time_meas'])[masknan]-np.array(dict_intervals[interval]['at_start']['time_meas'])[masknan])/60.))
+        #
+        #     sp_time_bbb_list[i_sp].set_ylabel('Beam {}, Time start to end [min]'.format(beam_n))
+        #     sp_time_bbb_list[i_sp].grid('on')
+        #     sp_time_bbb_list[i_sp].tick_params(axis='both', which='major', pad=5)
+        #     sp_time_bbb_list[i_sp].xaxis.labelpad = 1
+        #
+        #
+        # sp_emit_bbb_list[-1].set_xlabel('25 ns slot')
+        # sp_emit_bbb_list[-1].set_ylim(1., 5.)
+        #
+        # sp_inten_bbb_list[-1].set_xlabel('25 ns slot')
+        # for sp in sp_emit_hist_list + sp_emit_bbb_list + sp_inten_bbb_list + sp_emit_bbb_list + sp_bright_bbb_list + sp_inten_hist_list +sp_bright_hist_list +sp_time_bbb_list:
+        #     sp.legend(bbox_to_anchor=(1, 1),  loc='upper left', prop={'size':self.myfontsize})
+        #
+        # fig_emit_hist.subplots_adjust(left=.09, bottom=.07, right=.76, top=.92, wspace=1., hspace=.55)
+        # tref_string = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(t_ref))
+        # for fig in list_figs:
+        #     fig.suptitle('Fill {}: started on {}'.format(filln, tref_string), fontsize=self.myfontsize)
+        #
+        #     if fig is fig_emit_hist:
+        #         continue
+        #     fig.subplots_adjust(left=.05, right=.81, top=.93)
+        #
+        # if not self.batch:
+        #     pl.show()
+        #
+        # if self.savePlots:
+        #     timeString = datetime.now().strftime("%Y%m%d")
+        #     saveString = timeString+self.plotFormat
+        #     plot_dir   = self.plot_dir.replace('<FILLNUMBER>',str(filln))
+        #     savename   = plot_dir+'fill_{}_cycle_EmittanceHist_{}'.format(filln, saveString)
+        #     fig_emit_hist.savefig(savename, dpi=self.plotDpi)
+        #
+        #     savename   = plot_dir+'fill_{}_cycle_bbbEmittance_{}'.format(filln, saveString)
+        #     fig_emit_bbb.savefig(savename, dpi=self.plotDpi)
+        #
+        #     savename   = plot_dir+'fill_{}_cycle_bbbIntensity_{}'.format(filln, saveString)
+        #     fig_inten_bbb.savefig(savename, dpi=self.plotDpi)
+        #
+        #     savename   = plot_dir+'fill_{}_cycle_bbbBrightness_{}'.format(filln, saveString)
+        #     fig_bright_bbb.savefig(savename, dpi=self.plotDpi)
+        #
+        #     savename   = plot_dir+'fill_{}_cycle_bbbTime_{}'.format(filln, saveString)
+        #     fig_time_bbb.savefig(savename, dpi=self.plotDpi)
+        #
+        #     savename   = plot_dir+'fill_{}_cycle_bbbBLength_{}'.format(filln, saveString)
+        #     fig_blength_bbb.savefig(savename, dpi=self.plotDpi)
     ## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
     def checkDirectories(self, filln):
         ##############################  CHECK IF THE OUTPUT DIRECTORIES EXIST  ##############################
@@ -797,6 +1521,14 @@ class LumiFollowUp(object):
         doSB       = False
         doLumiCalc = False
         doCycle    = False
+        skip       = False
+
+        ### Check if the fill is in bmodes file...
+        if filln not in self.bmodes.index.values:
+            fatal("#checkFiles : Fill {} is not in BMODES skipping it...".format(filln))
+            os.rmdir(self.plot_dir.replace('<FILLNUMBER>',str(filln)))
+            os.rmdir(self.fill_dir.replace('<FILLNUMBER>',str(filln)))
+            return getMassi, doSB, doLumiCalc, doCycle, True
 
         ##############################  CHECK IF THE OUTPUT FILES EXIST  ##############################
         ## Check if the massi file of the fill exists and flag it
@@ -833,6 +1565,13 @@ class LumiFollowUp(object):
         elif getMassi == False and tempGetMassi == True:
             ## if the file exists but the modification date is changed, force to download it
             getMassi = True
+            #rename the old massi file
+            info('#checkFiles : Updated Massi Files found - Copying old file to {}'.format(massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d")))))
+            print massi_filename, massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d")))
+            os.rename(massi_filename, massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
+            if self.savePandas:
+                os.rename(massi_filename.replace('.pkl.gz', '_df.pkl.gz'), massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
+
 
         ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
         ## Check if the SB file of the fill exists and flag it
@@ -844,7 +1583,7 @@ class LumiFollowUp(object):
             else:
                 SB_filename = SB_filename.replace('<RESC>', '').replace("<TO>", '')
         else:
-            SB_filename = filename.replace('<RESC>', '')
+            SB_filename = SB_filename.replace('<RESC>', '')
 
         if os.path.exists(SB_filename):
             if self.overwriteFiles:
@@ -878,7 +1617,7 @@ class LumiFollowUp(object):
             else:
                 lumi_calc_filename = lumi_calc_filename.replace('<RESC>', '').replace("<TO>", '')
         else:
-            filename = filename.replace('<RESC>', '')
+            lumi_calc_filename = lumi_calc_filename.replace('<RESC>', '')
 
         if os.path.exists(lumi_calc_filename):
             if self.overwriteFiles:
@@ -913,7 +1652,7 @@ class LumiFollowUp(object):
             else:
                 cycle_filename = cycle_filename.replace('<RESC>', '').replace("<TO>", '')
         else:
-            filename = filename.replace('<RESC>', '')
+            cycle_filename = cycle_filename.replace('<RESC>', '')
 
         if os.path.exists(cycle_filename):
             if self.overwriteFiles:
@@ -923,7 +1662,6 @@ class LumiFollowUp(object):
                 warn("#checkFiles : Dictionary Cycle pickle [{}] for fill {} already exists! Skipping it...".format(cycle_filename, filln))
         else:
             doCycle = True
-            print doCycle
         debug('#checkFiles : Checking if dictionary pickle of Cycle file [{}] for fill {} exists [{}]'.format(cycle_filename, filln, (not doCycle)  ))
 
         if self.savePandas:
@@ -936,11 +1674,10 @@ class LumiFollowUp(object):
                     warn("#checkFiles : Pands Cycle pickle [{}] for fill {} already exists! Skipping it...".format(cycle_filename, filln))
             else:
                 doCycle = True
-                print doCycle
             debug('#checkFiles : Checking if Pandas pickle of Cycle file [{}] for fill {} exists [{}]'.format(cycle_filename, filln, (not doCycle)  ))
 
 
-        return getMassi, doSB, doLumiCalc, doCycle
+        return getMassi, doSB, doLumiCalc, doCycle, skip
     ## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
     def runCycleSB(self, filln, doCycle, doSB):
         '''
@@ -1078,6 +1815,7 @@ class LumiFollowUp(object):
                 filtered_v = lowess(dict_bsrt_bunches[slot_bun]['norm_emit_v'][mask_from_squeeze], dict_bsrt_bunches[slot_bun]['t_stamp'][mask_from_squeeze], is_sorted=True, frac=frac_smoothing, it=10, delta=0.01*(t_end_STABLE-t_start_STABLE))
 
                 ## fill in the interpolated eh/ev
+                # print time_range, filtered_h[:,0], filtered_h[:,1]
                 eh_interp[beam_n].append(np.interp(time_range, filtered_h[:,0], filtered_h[:,1]))
                 ev_interp[beam_n].append(np.interp(time_range, filtered_v[:,0], filtered_v[:,1]))
 
@@ -1616,6 +2354,13 @@ class LumiFollowUp(object):
 
             ## Create ATLAS DF
             df_calc_ATLAS = pd.DataFrame(np.vstack(lumi_bbb_ATLAS_invm2))
+
+            # how many slots are filled
+            df_calc_ATLAS.insert(0, 'filled_slots', [np.array(lumi_bbb_ATLAS_invm2).shape[1]]*len(df_calc_ATLAS))
+
+            ## add the bunch_lumi in one cell
+            df_calc_ATLAS.insert(0, 'bunch_lumi', np.array(lumi_bbb_ATLAS_invm2).tolist())
+
             ## first add (to the leftmost) the time range
             df_calc_ATLAS.insert(0, 'timestamp', time_range)
 
@@ -1636,6 +2381,12 @@ class LumiFollowUp(object):
 
             ## Create CMS DF
             df_calc_CMS = pd.DataFrame(np.vstack(lumi_bbb_CMS_invm2))
+            # how many slots are filled
+            df_calc_CMS.insert(0, 'filled_slots', [np.array(lumi_bbb_CMS_invm2).shape[1]]*len(df_calc_CMS))
+
+            ## add the bunch_lumi in one cell
+            df_calc_CMS.insert(0, 'bunch_lumi', np.array(lumi_bbb_CMS_invm2).tolist())
+
             ## first add (to the leftmost) the time range
             df_calc_CMS.insert(0, 'timestamp', time_range)
 
@@ -1656,7 +2407,7 @@ class LumiFollowUp(object):
             ## append the two df
             total_calc_df = df_calc_ATLAS.append(df_calc_CMS)
             ## set additional indexes to fill and experiment
-            total_calc_df = total_calc_df.set_index(['fill', 'experiment'])
+            total_calc_df = total_calc_df.set_index(['fill', 'experiment'], drop=False)
 
             info('# runCalculatedLuminosity : Saving Pandas for Lumi Calc of fill {} into {}'.format(filln, filename ))
             if os.path.exists(filename):
@@ -1707,10 +2458,18 @@ class LumiFollowUp(object):
             self.filln_LumiMeasDict[experiment]={}
             self.filln_LumiMeasDict[experiment]['bunch_lumi']=[]
 
-            if experiment=='ATLAS':
-                lumifile = '/afs/cern.ch/user/l/lpc/w0/2016/measurements/%s/%d.tgz'%(experiment, filln)
-            elif experiment=='CMS':
-                    lumifile = '/afs/cern.ch/user/l/lpc/w0/2016/measurements/%s/lumi/%d.tgz'%(experiment, filln)
+            # if experiment=='ATLAS':
+            #     lumifile = '/afs/cern.ch/user/l/lpc/w0/2016/measurements/%s/%d.tgz'%(experiment, filln)
+            # elif experiment=='CMS':
+            #         lumifile = '/afs/cern.ch/user/l/lpc/w0/2016/measurements/%s/lumi/%d.tgz'%(experiment, filln)
+
+            lumifile = config.massi_afs_path.replace('<YEAR>', str(config.massi_year))
+            if experiment == 'ATLAS':
+                lumifile = lumifile+config.massi_exp_folders[0]+"{}.tgz".format(filln)
+            elif experiment == 'CMS':
+                lumifile = lumifile+config.massi_exp_folders[1]+"{}.tgz".format(filln)
+            else:
+                raise IOError("# runMeasuredLuminosity : Unknown Experiment Error when running for Measured Luminosity.")
 
             with tarfile.open(lumifile, 'r:gz') as tarfid:
                 for slot_bun in slots_filled_coll[1]:
@@ -1720,13 +2479,13 @@ class LumiFollowUp(object):
 
                     bucket = (slot_bun)*10+1
 
-                    filename_bunch = '%d/%d_lumi_%d_%s.txt'%(filln, filln, bucket, experiment)
+                    filename_bunch = '{}/{}_lumi_{}_{}.txt'.format(filln, filln, bucket, experiment)
                     fid = tarfid.extractfile(filename_bunch)
                     temp_data = np.loadtxt(fid.readlines())
                     t_stamps = temp_data[:,0]
                     lumi_bunch = temp_data[:,2]
 
-                    self.filln_LumiMeasDict[experiment]['bunch_lumi'].append(np.interp(time_range,t_stamps, lumi_bunch)*1e34)
+                    self.filln_LumiMeasDict[experiment]['bunch_lumi'].append(np.interp(time_range,t_stamps, lumi_bunch)*config.massi_bunch_lumi_scale)
                     fid.close()
 
             self.filln_LumiMeasDict[experiment]['bunch_lumi'] = np.array(self.filln_LumiMeasDict[experiment]['bunch_lumi']).T
@@ -1780,6 +2539,7 @@ class LumiFollowUp(object):
         t_start_STABLE, t_end_STABLE, time_range, N_steps = self.getSBDataTimes(filln)
 
         ## Then load the necessary stuff from the SB dictionary
+
         eh_interp_coll               = self.filln_StableBeamsDict['eh_interp_coll']
         ev_interp_coll               = self.filln_StableBeamsDict['ev_interp_coll']
         eh_interp_raw_coll           = self.filln_StableBeamsDict['eh_interp_raw_coll']
@@ -1817,6 +2577,7 @@ class LumiFollowUp(object):
         axy_share = ax_ne1h
         ax_ne1v = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=axy_share)
         ax_ne1v_t = pl.subplot(2,3,4, sharex=ax_share_t, sharey=axy_share)
+        fig_em1.subplots_adjust(wspace=0.5, hspace=0.5)
 
 
         ## Figure : Emittances B2
@@ -1828,6 +2589,7 @@ class LumiFollowUp(object):
         ax_ne2v = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=axy_share)
         ax_ne2h_t = pl.subplot(2,3,1, sharex=ax_share_t, sharey=axy_share)
         ax_ne2v_t = pl.subplot(2,3,4, sharex=ax_share_t, sharey=axy_share)
+        fig_em2.subplots_adjust(wspace=0.5, hspace=0.5)
 
         ## Figure : Emittances B1 Raw
         info("# makePerformancePlotsPerFill : Fill {} -> Making Emittances B1 Raw plot...".format(filln))
@@ -1838,6 +2600,7 @@ class LumiFollowUp(object):
         ax_ne1h_t_raw = pl.subplot(2,3,1, sharex=ax_share_t, sharey=axy_share)
         ax_ne1v_raw = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=axy_share)
         ax_ne1v_t_raw = pl.subplot(2,3,4, sharex=ax_share_t, sharey=axy_share)
+        fig_em1_raw.subplots_adjust(wspace=0.5, hspace=0.5)
 
 
         ## Figure : Emittances B2 Raw
@@ -1849,6 +2612,7 @@ class LumiFollowUp(object):
         ax_ne2v_raw = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=axy_share)
         ax_ne2h_t_raw = pl.subplot(2,3,1, sharex=ax_share_t, sharey=axy_share)
         ax_ne2v_t_raw = pl.subplot(2,3,4, sharex=ax_share_t, sharey=axy_share)
+        fig_em2_raw.subplots_adjust(wspace=0.5, hspace=0.5)
 
         ## Figure : Bunch intensity
         info("# makePerformancePlotsPerFill : Fill {} -> Making Bunch Intensity plot...".format(filln))
@@ -1859,6 +2623,7 @@ class LumiFollowUp(object):
         bx_nb2 = pl.subplot(2,3,(5,6), sharex=ax_share)
         bx_nb1_t = pl.subplot(2,3,1, sharex=ax_share_t, sharey=bx_nb1)
         bx_nb2_t = pl.subplot(2,3,4, sharex=ax_share_t, sharey=bx_nb2)
+        fig_int.subplots_adjust(wspace=0.5, hspace=0.5)
 
 
         ## Figure : Bunch Length
@@ -1870,6 +2635,7 @@ class LumiFollowUp(object):
         bx_bl2 = pl.subplot(2,3,(5,6), sharex=ax_share)
         bx_bl1_t = pl.subplot(2,3,1, sharex=ax_share_t, sharey=bx_bl1)
         bx_bl2_t = pl.subplot(2,3,4, sharex=ax_share_t, sharey=bx_bl1)
+        fig_bl.subplots_adjust(wspace=0.5, hspace=0.5)
 
 
         self.plot_mean_and_spread(ax_ne1h_t_raw, (time_range-t_start_STABLE)/3600., eh_interp_raw_noncoll[1], color='grey', alpha=.5)
@@ -1906,7 +2672,6 @@ class LumiFollowUp(object):
 
         for i_time in range(N_steps):
             colorcurr = ms.colorprog(i_prog=i_time, Nplots=N_steps)
-
             ax_ne1h.plot(slots_filled_coll[1], eh_interp_coll[1][i_time, :], '.', color=colorcurr)
             ax_ne1v.plot(slots_filled_coll[1], ev_interp_coll[1][i_time, :], '.', color=colorcurr)
             ax_ne2h.plot(slots_filled_coll[2], eh_interp_coll[1][i_time, :], '.', color=colorcurr)
@@ -1940,27 +2705,29 @@ class LumiFollowUp(object):
 
         for sp in [ax_ne1h, ax_ne1v, ax_ne2h, ax_ne2v,bx_nb1, bx_nb2, bx_bl1, bx_bl2, ax_ne1h_raw, ax_ne1v_raw, ax_ne2h_raw, ax_ne2v_raw]:
             sp.grid('on')
-            sp.set_xlabel('25 ns slot')
+            sp.minorticks_on()
+            sp.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 
         for sp in [ax_ne1h_t, ax_ne1v_t, ax_ne2h_t, ax_ne2v_t, bx_nb1_t, bx_nb2_t, bx_bl1_t, bx_bl2_t, ax_ne1h_t_raw, ax_ne1v_t_raw, ax_ne2h_t_raw, ax_ne2v_t_raw]:
             sp.grid('on')
-            sp.set_xlabel('Time [h]')
+            sp.minorticks_on()
+            sp.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 
-        ax_ne1h_t.set_ylabel('Emittance B1H [$\mu$m]')
-        ax_ne1v_t.set_ylabel('Emittance B1V [$\mu$m]')
-        ax_ne2h_t.set_ylabel('Emittance B2H [$\mu$m]')
-        ax_ne2v_t.set_ylabel('Emittance B2V [$\mu$m]')
+        ax_ne1h_t.set_ylabel('Emittance B1H [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne1v_t.set_ylabel('Emittance B1V [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne2h_t.set_ylabel('Emittance B2H [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne2v_t.set_ylabel('Emittance B2V [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
 
-        ax_ne1h_t_raw.set_ylabel('Emittance B1H [$\mu$m]')
-        ax_ne1v_t_raw.set_ylabel('Emittance B1V [$\mu$m]')
-        ax_ne2h_t_raw.set_ylabel('Emittance B2H [$\mu$m]')
-        ax_ne2v_t_raw.set_ylabel('Emittance B2V [$\mu$m]')
+        ax_ne1h_t_raw.set_ylabel('Emittance B1H [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne1v_t_raw.set_ylabel('Emittance B1V [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne2h_t_raw.set_ylabel('Emittance B2H [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
+        ax_ne2v_t_raw.set_ylabel('Emittance B2V [$\mathbf{\mu}$m]', fontsize=14, fontweight='bold')
 
 
-        bx_nb1_t.set_ylabel('Intensity B1 [p/b]')
-        bx_nb2_t.set_ylabel('Intensity B2 [p/b]')
-        bx_bl1_t.set_ylabel('Bunch length B1 [ns]')
-        bx_bl2_t.set_ylabel('Bunch length B1 [ns]')
+        bx_nb1_t.set_ylabel('Intensity B1 [p/b]'  , fontsize=14, fontweight='bold')
+        bx_nb2_t.set_ylabel('Intensity B2 [p/b]'  , fontsize=14, fontweight='bold')
+        bx_bl1_t.set_ylabel('Bunch length B1 [ns]', fontsize=14, fontweight='bold')
+        bx_bl2_t.set_ylabel('Bunch length B1 [ns]', fontsize=14, fontweight='bold')
 
         ## ------------ Now plot for expected lumi
         info("# makePerformancePlotsPerFill : Fill {} -> Making Expected BBB Luminosities plot...".format(filln))
@@ -1971,6 +2738,7 @@ class LumiFollowUp(object):
         ax_CMS_calc = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=ax_ATLAS_calc)
         ax_ATLAS_calc_t = pl.subplot(2,3,1, sharex=ax_share_t, sharey=ax_ATLAS_calc)
         ax_CMS_calc_t = pl.subplot(2,3,4, sharex=ax_share_t, sharey=ax_ATLAS_calc)
+        fig_lumi_calc.subplots_adjust(wspace=0.5, hspace=0.5)
 
         for i_time in range(0, N_steps, self.n_skip):
             colorcurr = ms.colorprog(i_prog=i_time, Nplots=N_steps)
@@ -1990,6 +2758,7 @@ class LumiFollowUp(object):
         ax_CMS_meas     = pl.subplot(2,3,(5,6), sharex=ax_share, sharey=ax_ATLAS_calc)
         ax_ATLAS_meas_t = pl.subplot(2,3,1, sharex=ax_share_t, sharey=ax_ATLAS_calc)
         ax_CMS_meas_t   = pl.subplot(2,3,4, sharex=ax_share_t, sharey=ax_ATLAS_calc)
+        fig_lumi_meas.subplots_adjust(wspace=0.5, hspace=0.5)
 
         self.plot_mean_and_spread(ax_ATLAS_meas_t, (time_range-t_start_STABLE)/3600., self.filln_LumiMeasDict['ATLAS']['bunch_lumi'])
         self.plot_mean_and_spread(ax_CMS_meas_t,   (time_range-t_start_STABLE)/3600., self.filln_LumiMeasDict['CMS']['bunch_lumi'])
@@ -2002,17 +2771,17 @@ class LumiFollowUp(object):
 
         for sp in [ax_ATLAS_calc, ax_CMS_calc, ax_ATLAS_meas, ax_CMS_meas]:
             sp.grid('on')
-            sp.set_xlabel('25 ns slot')
+            sp.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 
         for sp in [ax_ATLAS_calc_t, ax_CMS_calc_t, ax_ATLAS_meas_t, ax_CMS_meas_t]:
             sp.grid('on')
-            sp.set_xlabel('Time [h]')
+            sp.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
             sp.set_xlim(0, -(t_start_STABLE-t_end_STABLE)/3600.)
 
-        ax_ATLAS_calc_t.set_ylabel('Luminosity ATLAS [m$^2$ s$^{-1}$]')
-        ax_CMS_calc_t.set_ylabel('Luminosity CMS [m$^2$ s$^{-1}$]')
-        ax_ATLAS_meas_t.set_ylabel('Luminosity ATLAS [m$^2$ s$^{-1}$]')
-        ax_CMS_meas_t.set_ylabel('Luminosity CMS [m$^2$ s$^{-1}$]')
+        ax_ATLAS_calc_t.set_ylabel('Luminosity ATLAS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]')
+        ax_CMS_calc_t.set_ylabel('Luminosity CMS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]')
+        ax_ATLAS_meas_t.set_ylabel('Luminosity ATLAS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]')
+        ax_CMS_meas_t.set_ylabel('Luminosity CMS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]')
         ax_CMS_meas.set_xlim(0, 3564)
 
         ## Figure of Total Luminosity Measured and Calculated for ATLAS/CMS (sum up bbb)
@@ -2020,18 +2789,18 @@ class LumiFollowUp(object):
         fig_total = pl.figure(8, figsize=self.fig_tuple)
         fig_total.canvas.set_window_title('Total Luminosity')
         fig_total.set_facecolor('w')
-        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['ATLAS']['bunch_lumi'], axis=1),       color='b', linewidth=2., label="ATLAS Meas.")
-        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_ATLAS_invm2,              axis=1), '--', color='b', linewidth=2., label="ATLAS Calc.")
-        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['CMS']['bunch_lumi'],   axis=1),       color='r', linewidth=2., label="CMS Meas.")
-        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_CMS_invm2,                axis=1), '--', color='r', linewidth=2., label="CMS Calc.")
+        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['ATLAS']['bunch_lumi'], axis=1),       color='b', linewidth=2., label="$\mathcal{L}^{meas}_{ATLAS}$")
+        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_ATLAS_invm2,              axis=1), '--', color='b', linewidth=2., label="$\mathcal{L}^{calc}_{ATLAS}$")
+        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['CMS']['bunch_lumi'],   axis=1),       color='r', linewidth=2., label="$\mathcal{L}^{meas}_{CMS}$")
+        pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_CMS_invm2,                axis=1), '--', color='r', linewidth=2., label="$\mathcal{L}^{calc}_{CMS}$")
         pl.legend(loc='best', prop={"size":12})
         pl.xlim(-.5, None)
         pl.ylim(0, None)
-        pl.ylabel('Luminosity ATLAS [cm$^2$ s$^{-1}$]') ## NK: cm??? ATLAS??
-        pl.xlabel('Time [h]')
+        pl.ylabel('Luminosity [cm$\mathbf{^2}$ s$\mathbf{^{-1}}$]', fontweight='bold', fontsize=14) ## NK: cm??? ATLAS??
+        pl.xlabel('Time [h]', fontsize=14, fontweight='bold')
         pl.grid()
 
-        figlist = [fig_total, fig_int, fig_em1, fig_em2, fig_bl, fig_lumi_calc, fig_lumi_meas]
+        figlist = [fig_total, fig_int, fig_em1, fig_em2, fig_em1_raw, fig_em2_raw, fig_bl, fig_lumi_calc, fig_lumi_meas]
         for ff in figlist:
             tref_string = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(t_start_STABLE))
             ff.suptitle('Fill {}: STABLE BEAMS declared on {}'.format(filln, tref_string), fontsize=self.myfontsize)
@@ -2072,9 +2841,13 @@ class LumiFollowUp(object):
         ## First check if the directories for this fill exist
         self.checkDirectories(filln)
         ## Then see if the files for this fill exist and see what can be done
-        getMassi, doSB, doLumiCalc, doCycle = self.checkFiles(filln)
+        getMassi, doSB, doLumiCalc, doCycle, skip = self.checkFiles(filln)
 
-        print getMassi, doSB, doLumiCalc, doCycle
+        if skip:
+            warn("#runForFill : I was ordered to skip fill {} from checkFiles... Skipping...".format(filln))
+            return
+
+        #print getMassi, doSB, doLumiCalc, doCycle
 
         ## Check if I have forces something (or everything)
         if self.force:
@@ -2204,7 +2977,17 @@ class LumiFollowUp(object):
         info('# runForFillList : Running loop for fills : {}'.format(self.filln_list))
 
         for filln in self.filln_list:
-            self.runForFill(filln)
+            #clear local dictionaries
+            self.filln_CycleDict.clear()
+            self.filln_StableBeamsDict.clear()
+            self.filln_LumiCalcDict.clear()
+            self.filln_LumiMeasDict.clear()
+            try:
+                self.runForFill(filln)
+            except:
+                os.rmdir(self.plot_dir.replace('<FILLNUMBER>',str(filln)))
+                os.rmdir(self.fill_dir.replace('<FILLNUMBER>',str(filln)))
+                warn("#runForFillList : Issues with Fill {}. Look at the logs.".format(filln))
 
         info('# runForFillList : Done for all fills.')
     ## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *

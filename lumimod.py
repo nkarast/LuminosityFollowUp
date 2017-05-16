@@ -267,7 +267,7 @@ def main():
 
 
     else:
-        print config.massi_year, config.massi_exp_folders
+        # print config.massi_year, config.massi_exp_folders
 
         # # Create the LumiFollowUp object
         fl = LumiFollowUp.LumiFollowUp(debug=debug, batch=batch, FORMAT=config.FORMAT, loglevel=loglevel, logfile=None, fills_bmodes_file=config.fills_bmodes_file,
