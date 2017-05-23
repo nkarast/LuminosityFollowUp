@@ -14,7 +14,7 @@ basicConfig(format='%(asctime)s %(levelname)s : %(message)s', filename=None, lev
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 
 def createYamlDB(yamldb='fill_db.yaml', year=2016, afs_path='/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/',
-               exp_folders=['ATLAS/', 'CMS/lumi/']):
+               exp_folders=['ATLAS/lumi/', 'CMS/lumi/']):
 
     study_year = year
     afs_path = afs_path.replace('<YEAR>', str(year))

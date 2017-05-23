@@ -15,7 +15,7 @@ basicConfig(format='%(asctime)s %(levelname)s : %(message)s', filename=None, lev
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 
 def readYamlDB(filln, year=2016, yamldb='fill_db.yaml', afs_path='/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/',
-               exp_folders=['ATLAS/', 'CMS/lumi/']):
+               exp_folders=['ATLAS/lumi/', 'CMS/lumi/']):
     '''
     Function to read the YAML database with the fill numbers and their last modified date. If the date is not the same as
     in the database a bool True is returned to trigger the run for Massi files.
@@ -44,7 +44,8 @@ def readYamlDB(filln, year=2016, yamldb='fill_db.yaml', afs_path='/afs/cern.ch/u
         infile = glob.glob(exp_path+"{}*[!*lumi*][!*tmp*][!*lumiregion*]".format(filln))
 
         if len(infile) == 0 :
-            raise IOError('# readYamlDB : File for fill {} of experiment {} does not exist!'.format(filln, exp.split("/")[0]))
+            fatal('# readYamlDB : File for fill {} of experiment {} does not exist!'.format(filln, exp.split("/")[0]))
+            return False
         else:
             infile = infile[0]
 
