@@ -832,7 +832,7 @@ class LumiFollowUp(object):
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['intensity'])),  '.', color='green',  markersize=8, label='End Ramp')
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",      mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['intensity']  )),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b1.set_ylabel("B1 Intensity [ppb]", fontsize=14, fontweight='bold')
-		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+#		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b1.minorticks_on()
 		ax_b1.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['intensity']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  ))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['intensity']  ))),
@@ -910,7 +910,7 @@ class LumiFollowUp(object):
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['brightness'])),  '.', color='green',  markersize=8, label='End Ramp')
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['brightness'])),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b1.set_ylabel("B1 Brightness [p/$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
-		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+#		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b1.minorticks_on()
 		ax_b1.text(0.5, 0.9, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['brightness']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['brightness']))),
@@ -989,7 +989,7 @@ class LumiFollowUp(object):
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength'])),  '.', color='green',  markersize=8, label='End Ramp')
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength'])),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b1.set_ylabel("B1 Bunch Length [p/b]", fontsize=12, fontweight='bold')
-		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+#		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b1.minorticks_on()
 		ax_b1.text(0.5, 0.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))),
@@ -1086,7 +1086,7 @@ class LumiFollowUp(object):
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",  "at_start",  mask_invalid=True), time_b1_inj, '.', color='blue',   markersize=8, label='Injection')
 		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",      mask_invalid=True), time_b1_ft,    '.', color='red',    markersize=8, label='Flat Top')
 		ax_b1.set_ylabel("B1 Time [min]", fontsize=12, fontweight='bold')
-		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
+#		ax_b1.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b1.minorticks_on()
 		ax_b1.text(0.5, 0.9, "Injection: {:.2f}$\pm${:.2f} | Flat Top : {:.2f}$\pm${:.2f}".format(mean_time_b1_inj, std_time_b1_inj,mean_time_b1_ft,std_time_b1_ft ),
 
