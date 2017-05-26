@@ -1673,13 +1673,14 @@ class LumiFollowUp(object):
 		doCycle         = False
 		doCycle_model   = False
 		skip            = False
+		skipMassi      = False
 
 		### Check if the fill is in bmodes file...
 		if filln not in self.bmodes.index.values:
 			fatal("#checkFiles : Fill {} is not in BMODES skipping it...".format(filln))
 			os.rmdir(self.plot_dir.replace('<FILLNUMBER>',str(filln)))
 			os.rmdir(self.fill_dir.replace('<FILLNUMBER>',str(filln)))
-			return getMassi, doSB, doSBFits, doSBModel, doLifetime, doLumiCalc, doCycle, doCycle_model, True
+			return getMassi, skipMassi, doSB, doSBFits, doSBModel, doLifetime, doLumiCalc, doCycle, doCycle_model, True
 
 		##############################  CHECK IF THE OUTPUT FILES EXIST  ##############################
 		## Check if the massi file of the fill exists and flag it
@@ -2709,7 +2710,7 @@ class LumiFollowUp(object):
 
 		if len(self.filln_CycleDict) > 0:
 			#get stuff
-			debug("# runCycleModel : Cycle Dictionary is filled for Fill [{}].".format(filename))
+			debug("# runCycleModel : Cycle Dictionary is filled for Fill [{}].".format(filln))
 		else:
 			##populate it from file
 			filename = self.fill_dir+self.Cycle_filename
