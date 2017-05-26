@@ -416,6 +416,7 @@ class LumiFollowUp(object):
 		self.fill_year                  = fill_year
 		self.massi_afs_path             = massi_afs_path
 		self.massi_exp_folders          = massi_exp_folders
+		self.skipMassi 					= None
 
 
 		## --- These dictionaries here are placeholders. Per fill they will store
