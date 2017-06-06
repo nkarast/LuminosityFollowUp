@@ -1356,7 +1356,7 @@ class LumiFollowUp(object):
 				os.rename(massi_filename, massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
 				if self.savePandas:
 					os.rename(massi_filename.replace('.pkl.gz', '_df.pkl.gz'), massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
-		
+
 		if getTimber:
 			massi_filename = self.fill_dir+self.Massi_filename.replace('meas', 'timber_meas')
 			if os.path.exists(massi_filename):
@@ -2335,7 +2335,7 @@ class LumiFollowUp(object):
 				# b1_inj_at_end_emitv     	= self.filln_CycleDict['beam_1']['Injection']['at_end']['emith']
 
 
-				
+
 
 				# b2_inj_t_start      = self.filln_CycleDict['beam_2']['Injection']['t_start']
 				# b2_inj_t_end        = self.filln_CycleDict['beam_2']['Injection']['t_end']
@@ -2354,7 +2354,7 @@ class LumiFollowUp(object):
 				# b2_inj_at_end_intensity   	= self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity']
 				# b2_inj_at_end_emith     	= self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv']
 				# b2_inj_at_end_emitv     	= self.filln_CycleDict['beam_2']['Injection']['at_end']['emith']
-				
+
 
 				# b1_he_t_start       		= self.filln_CycleDict['beam_1']['he_before_SB']['t_start']
 				# b1_he_t_end         		= self.filln_CycleDict['beam_1']['he_before_SB']['t_end']
@@ -2375,7 +2375,7 @@ class LumiFollowUp(object):
 				# b1_he_at_end_emith     		= self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv']
 				# b1_he_at_end_emitv     		= self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith']
 
-				
+
 
 				# b2_he_t_start       		= self.filln_CycleDict['beam_2']['he_before_SB']['t_start']
 				# b2_he_t_end         		= self.filln_CycleDict['beam_2']['he_before_SB']['t_end']
@@ -2405,12 +2405,12 @@ class LumiFollowUp(object):
 				df_b1_inj_start['emitv']      = np.nan; df_b1_inj_start['emitv']     = df_b1_inj_start['emitv'].astype(object)
 				df_b1_inj_start['emith']      = np.nan; df_b1_inj_start['emith']     = df_b1_inj_start['emith'].astype(object)
 				df_b1_inj_start['filled_slots']      = np.nan; df_b1_inj_start['filled_slots']     = df_b1_inj_start['filled_slots'].astype(object)
-				
+
 				df_b1_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['Injection']['at_start']['time_meas'])
-				df_b1_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_start']['blength'])   
+				df_b1_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_start']['blength'])
 				df_b1_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['Injection']['at_start']['brightness'])
-				df_b1_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity']) 
-				df_b1_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])     
+				df_b1_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity'])
+				df_b1_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])
 				df_b1_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_start']['emith'])
 				df_b1_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])
 
@@ -2423,7 +2423,7 @@ class LumiFollowUp(object):
 				# df_b1_inj_start['intensity']       	  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity'])
 				# df_b1_inj_start['emitv']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])
 				# df_b1_inj_start['emith']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['emith'])
-	
+
 				df_b1_inj_start.insert(0, 'timestamp_end'  , self.filln_CycleDict['beam_1']['Injection']['t_end']*len(df_b1_inj_start))
 				# df_b1_inj_start.insert(0, 'datetime_end'   , self.convertToLocalTime(df_b1_inj_start['timestamp_end']))
 				df_b1_inj_start.insert(0, 'timestamp_start', self.filln_CycleDict['beam_1']['Injection']['t_start']*len(df_b1_inj_start))
@@ -2439,21 +2439,21 @@ class LumiFollowUp(object):
 				## beam 1 - injection end
 				df_b1_inj_end = pd.DataFrame()
 
-				df_b1_inj_end['time_meas']  = np.nan ; df_b1_inj_end['time_meas']  = df_b1_inj_end['time_meas'].astype(object)  
-				df_b1_inj_end['blength']    = np.nan ; df_b1_inj_end['blength']    = df_b1_inj_end['blength'].astype(object)    
-				df_b1_inj_end['brightness'] = np.nan ; df_b1_inj_end['brightness'] = df_b1_inj_end['brightness'].astype(object) 
-				df_b1_inj_end['intensity']  = np.nan ; df_b1_inj_end['intensity']  = df_b1_inj_end['intensity'].astype(object)  
-				df_b1_inj_end['emitv']      = np.nan ; df_b1_inj_end['emitv']      = df_b1_inj_end['emitv'].astype(object)      
-				df_b1_inj_end['emith']      = np.nan ; df_b1_inj_end['emith']      = df_b1_inj_end['emith'].astype(object)   
-				df_b1_inj_end['filled_slots']      = np.nan ; df_b1_inj_end['filled_slots']      = df_b1_inj_end['filled_slots'].astype(object)   
+				df_b1_inj_end['time_meas']  = np.nan ; df_b1_inj_end['time_meas']  = df_b1_inj_end['time_meas'].astype(object)
+				df_b1_inj_end['blength']    = np.nan ; df_b1_inj_end['blength']    = df_b1_inj_end['blength'].astype(object)
+				df_b1_inj_end['brightness'] = np.nan ; df_b1_inj_end['brightness'] = df_b1_inj_end['brightness'].astype(object)
+				df_b1_inj_end['intensity']  = np.nan ; df_b1_inj_end['intensity']  = df_b1_inj_end['intensity'].astype(object)
+				df_b1_inj_end['emitv']      = np.nan ; df_b1_inj_end['emitv']      = df_b1_inj_end['emitv'].astype(object)
+				df_b1_inj_end['emith']      = np.nan ; df_b1_inj_end['emith']      = df_b1_inj_end['emith'].astype(object)
+				df_b1_inj_end['filled_slots']      = np.nan ; df_b1_inj_end['filled_slots']      = df_b1_inj_end['filled_slots'].astype(object)
 
 				df_b1_inj_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['Injection']['at_end']['time_meas'])
-				df_b1_inj_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])   
+				df_b1_inj_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])
 				df_b1_inj_end.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['Injection']['at_end']['brightness'])
-				df_b1_inj_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity']) 
-				df_b1_inj_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])     
-				df_b1_inj_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])        
-				df_b1_inj_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])        
+				df_b1_inj_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity'])
+				df_b1_inj_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])
+				df_b1_inj_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])
+				df_b1_inj_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])
 
 				# df_b1_inj_end['time_meas']    	  			= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['time_meas'])
 				# df_b1_inj_end['blength']     		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])
@@ -2461,7 +2461,7 @@ class LumiFollowUp(object):
 				# df_b1_inj_end['intensity']       	  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity'])
 				# df_b1_inj_end['emitv']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])
 				# df_b1_inj_end['emith']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])
-				
+
 
 
 				df_b1_inj_end.insert(0, 'timestamp_end'  , self.filln_CycleDict['beam_1']['Injection']['t_end']*len(df_b1_inj_end))
@@ -2480,21 +2480,21 @@ class LumiFollowUp(object):
 				## beam 2 - injection start
 				df_b2_inj_start = pd.DataFrame()
 
-				df_b2_inj_start['time_meas']  = np.nan ; df_b2_inj_start['time_meas']  = df_b2_inj_start['time_meas'].astype(object)     
-				df_b2_inj_start['blength']    = np.nan ; df_b2_inj_start['blength']    = df_b2_inj_start['blength'].astype(object)       
-				df_b2_inj_start['brightness'] = np.nan ; df_b2_inj_start['brightness'] = df_b2_inj_start['brightness'].astype(object)    
-				df_b2_inj_start['intensity']  = np.nan ; df_b2_inj_start['intensity']  = df_b2_inj_start['intensity'].astype(object)     
-				df_b2_inj_start['emitv']      = np.nan ; df_b2_inj_start['emitv']      = df_b2_inj_start['emitv'].astype(object)         
-				df_b2_inj_start['emith']      = np.nan ; df_b2_inj_start['emith']      = df_b2_inj_start['emith'].astype(object)         
-				df_b2_inj_start['filled_slots']      = np.nan ; df_b2_inj_start['filled_slots']      = df_b2_inj_start['filled_slots'].astype(object)         
+				df_b2_inj_start['time_meas']  = np.nan ; df_b2_inj_start['time_meas']  = df_b2_inj_start['time_meas'].astype(object)
+				df_b2_inj_start['blength']    = np.nan ; df_b2_inj_start['blength']    = df_b2_inj_start['blength'].astype(object)
+				df_b2_inj_start['brightness'] = np.nan ; df_b2_inj_start['brightness'] = df_b2_inj_start['brightness'].astype(object)
+				df_b2_inj_start['intensity']  = np.nan ; df_b2_inj_start['intensity']  = df_b2_inj_start['intensity'].astype(object)
+				df_b2_inj_start['emitv']      = np.nan ; df_b2_inj_start['emitv']      = df_b2_inj_start['emitv'].astype(object)
+				df_b2_inj_start['emith']      = np.nan ; df_b2_inj_start['emith']      = df_b2_inj_start['emith'].astype(object)
+				df_b2_inj_start['filled_slots']      = np.nan ; df_b2_inj_start['filled_slots']      = df_b2_inj_start['filled_slots'].astype(object)
 
 				df_b2_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['Injection']['at_start']['time_meas'])
-				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_start']['blength'])   
+				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_start']['blength'])
 				df_b2_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['Injection']['at_start']['brightness'])
-				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_start']['intensity']) 
-				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_start']['emitv'])     
-				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_start']['emith'])        
-				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])        
+				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_start']['intensity'])
+				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_start']['emitv'])
+				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_start']['emith'])
+				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])
 
 
 				# df_b2_inj_start['time_meas']    	  = pd.Series(self.filln_CycleDict['beam_2']['Injection']['at_start']['time_meas'])
@@ -2518,21 +2518,21 @@ class LumiFollowUp(object):
 
 				## beam 2 - injection end
 				df_b2_inj_end = pd.DataFrame()
-				df_b2_inj_end['time_meas']  = np.nan ; df_b2_inj_end['time_meas']   = df_b2_inj_end['time_meas'].astype(object)           
-				df_b2_inj_end['blength']    = np.nan ; df_b2_inj_end['blength']     = df_b2_inj_end['blength'].astype(object)             
-				df_b2_inj_end['brightness'] = np.nan ; df_b2_inj_end['brightness']  = df_b2_inj_end['brightness'].astype(object)          
-				df_b2_inj_end['intensity']  = np.nan ; df_b2_inj_end['intensity']   = df_b2_inj_end['intensity'].astype(object)           
-				df_b2_inj_end['emitv']      = np.nan ; df_b2_inj_end['emitv']       = df_b2_inj_end['emitv'].astype(object)               
-				df_b2_inj_end['emith']      = np.nan ; df_b2_inj_end['emith']       = df_b2_inj_end['emith'].astype(object)      
-				df_b2_inj_end['filled_slots']      = np.nan ; df_b2_inj_end['filled_slots']       = df_b2_inj_end['filled_slots'].astype(object)      
+				df_b2_inj_end['time_meas']  = np.nan ; df_b2_inj_end['time_meas']   = df_b2_inj_end['time_meas'].astype(object)
+				df_b2_inj_end['blength']    = np.nan ; df_b2_inj_end['blength']     = df_b2_inj_end['blength'].astype(object)
+				df_b2_inj_end['brightness'] = np.nan ; df_b2_inj_end['brightness']  = df_b2_inj_end['brightness'].astype(object)
+				df_b2_inj_end['intensity']  = np.nan ; df_b2_inj_end['intensity']   = df_b2_inj_end['intensity'].astype(object)
+				df_b2_inj_end['emitv']      = np.nan ; df_b2_inj_end['emitv']       = df_b2_inj_end['emitv'].astype(object)
+				df_b2_inj_end['emith']      = np.nan ; df_b2_inj_end['emith']       = df_b2_inj_end['emith'].astype(object)
+				df_b2_inj_end['filled_slots']      = np.nan ; df_b2_inj_end['filled_slots']       = df_b2_inj_end['filled_slots'].astype(object)
 
 				df_b2_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['Injection']['at_end']['time_meas'])
-				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_end']['blength'])   
+				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_end']['blength'])
 				df_b2_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['Injection']['at_end']['brightness'])
-				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity']) 
-				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv'])     
-				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_end']['emith'])                 
-				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])                 
+				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity'])
+				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv'])
+				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_end']['emith'])
+				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])
 
 
 
@@ -2559,21 +2559,21 @@ class LumiFollowUp(object):
 				######## FLATTOP
 				## beam 1 - FLATTOP start
 				df_b1_he_start = pd.DataFrame()
-				df_b1_he_start['time_meas']  = np.nan ; df_b1_he_start['time_meas']  = df_b1_he_start['time_meas'].astype(object) 
-				df_b1_he_start['blength']    = np.nan ; df_b1_he_start['blength']    = df_b1_he_start['blength'].astype(object)   
+				df_b1_he_start['time_meas']  = np.nan ; df_b1_he_start['time_meas']  = df_b1_he_start['time_meas'].astype(object)
+				df_b1_he_start['blength']    = np.nan ; df_b1_he_start['blength']    = df_b1_he_start['blength'].astype(object)
 				df_b1_he_start['brightness'] = np.nan ; df_b1_he_start['brightness'] = df_b1_he_start['brightness'].astype(object)
-				df_b1_he_start['intensity']  = np.nan ; df_b1_he_start['intensity']  = df_b1_he_start['intensity'].astype(object) 
-				df_b1_he_start['emitv']      = np.nan ; df_b1_he_start['emitv']      = df_b1_he_start['emitv'].astype(object)     
-				df_b1_he_start['emith']      = np.nan ; df_b1_he_start['emith']      = df_b1_he_start['emith'].astype(object)  
-				df_b1_he_start['filled_slots']      = np.nan ; df_b1_he_start['filled_slots']      = df_b1_he_start['filled_slots'].astype(object)  
+				df_b1_he_start['intensity']  = np.nan ; df_b1_he_start['intensity']  = df_b1_he_start['intensity'].astype(object)
+				df_b1_he_start['emitv']      = np.nan ; df_b1_he_start['emitv']      = df_b1_he_start['emitv'].astype(object)
+				df_b1_he_start['emith']      = np.nan ; df_b1_he_start['emith']      = df_b1_he_start['emith'].astype(object)
+				df_b1_he_start['filled_slots']      = np.nan ; df_b1_he_start['filled_slots']      = df_b1_he_start['filled_slots'].astype(object)
 
 				df_b1_he_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['time_meas'])
-				df_b1_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['blength'])   
+				df_b1_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['blength'])
 				df_b1_he_start.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['brightness'])
-				df_b1_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['intensity']) 
-				df_b1_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emitv'])     
-				df_b1_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emith'])				   
-				df_b1_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])				   
+				df_b1_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['intensity'])
+				df_b1_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emitv'])
+				df_b1_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emith'])
+				df_b1_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])
 
 
 				# df_b1_he_start['time_meas']    	  		= pd.Series(self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['time_meas'])
@@ -2596,21 +2596,21 @@ class LumiFollowUp(object):
 
 				## beam 1 - FLATTOP end
 				df_b1_he_end = pd.DataFrame()
-				df_b1_he_end['time_meas']  = np.nan ; df_b1_he_end['time_meas']   = df_b1_he_end['time_meas'].astype(object)       
-				df_b1_he_end['blength']    = np.nan ; df_b1_he_end['blength']     = df_b1_he_end['blength'].astype(object)         
-				df_b1_he_end['brightness'] = np.nan ; df_b1_he_end['brightness']  = df_b1_he_end['brightness'].astype(object)      
-				df_b1_he_end['intensity']  = np.nan ; df_b1_he_end['intensity']   = df_b1_he_end['intensity'].astype(object)       
-				df_b1_he_end['emitv']      = np.nan ; df_b1_he_end['emitv']       = df_b1_he_end['emitv'].astype(object)           
-				df_b1_he_end['emith']      = np.nan ; df_b1_he_end['emith']       = df_b1_he_end['emith'].astype(object)     
-				df_b1_he_end['filled_slots']      = np.nan ; df_b1_he_end['filled_slots']       = df_b1_he_end['filled_slots'].astype(object)     
+				df_b1_he_end['time_meas']  = np.nan ; df_b1_he_end['time_meas']   = df_b1_he_end['time_meas'].astype(object)
+				df_b1_he_end['blength']    = np.nan ; df_b1_he_end['blength']     = df_b1_he_end['blength'].astype(object)
+				df_b1_he_end['brightness'] = np.nan ; df_b1_he_end['brightness']  = df_b1_he_end['brightness'].astype(object)
+				df_b1_he_end['intensity']  = np.nan ; df_b1_he_end['intensity']   = df_b1_he_end['intensity'].astype(object)
+				df_b1_he_end['emitv']      = np.nan ; df_b1_he_end['emitv']       = df_b1_he_end['emitv'].astype(object)
+				df_b1_he_end['emith']      = np.nan ; df_b1_he_end['emith']       = df_b1_he_end['emith'].astype(object)
+				df_b1_he_end['filled_slots']      = np.nan ; df_b1_he_end['filled_slots']       = df_b1_he_end['filled_slots'].astype(object)
 
 				df_b1_he_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['time_meas'])
-				df_b1_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['blength'])   
+				df_b1_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['blength'])
 				df_b1_he_end.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['brightness'])
-				df_b1_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['intensity']) 
-				df_b1_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv'])     
-				df_b1_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith'])      
-				df_b1_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])      
+				df_b1_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['intensity'])
+				df_b1_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv'])
+				df_b1_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith'])
+				df_b1_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])
 
 
 
@@ -2634,22 +2634,22 @@ class LumiFollowUp(object):
 				## beam 2- FLATTOP start
 				df_b2_he_start = pd.DataFrame()
 
-				df_b2_he_start['time_meas']  = np.nan ;	df_b2_he_start['time_meas']    	 = df_b2_he_start['time_meas'].astype(object)         	
-				df_b2_he_start['blength']   = np.nan ;	df_b2_he_start['blength']     	 = df_b2_he_start['blength'].astype(object)          	
-				df_b2_he_start['brightness'] = np.nan ;	df_b2_he_start['brightness']     = df_b2_he_start['brightness'].astype(object)         
-				df_b2_he_start['intensity']  = np.nan ;	df_b2_he_start['intensity']      = df_b2_he_start['intensity'].astype(object)          
-				df_b2_he_start['emitv']     = np.nan ;	df_b2_he_start['emitv']       	 = df_b2_he_start['emitv'].astype(object)            	
-				df_b2_he_start['emith']     = np.nan ;	df_b2_he_start['emith']       	 = df_b2_he_start['emith'].astype(object)       
-				df_b2_he_start['filled_slots']     = np.nan ;	df_b2_he_start['filled_slots']       	 = df_b2_he_start['filled_slots'].astype(object)       
+				df_b2_he_start['time_meas']  = np.nan ;	df_b2_he_start['time_meas']    	 = df_b2_he_start['time_meas'].astype(object)
+				df_b2_he_start['blength']   = np.nan ;	df_b2_he_start['blength']     	 = df_b2_he_start['blength'].astype(object)
+				df_b2_he_start['brightness'] = np.nan ;	df_b2_he_start['brightness']     = df_b2_he_start['brightness'].astype(object)
+				df_b2_he_start['intensity']  = np.nan ;	df_b2_he_start['intensity']      = df_b2_he_start['intensity'].astype(object)
+				df_b2_he_start['emitv']     = np.nan ;	df_b2_he_start['emitv']       	 = df_b2_he_start['emitv'].astype(object)
+				df_b2_he_start['emith']     = np.nan ;	df_b2_he_start['emith']       	 = df_b2_he_start['emith'].astype(object)
+				df_b2_he_start['filled_slots']     = np.nan ;	df_b2_he_start['filled_slots']       	 = df_b2_he_start['filled_slots'].astype(object)
 
 
 				df_b2_he_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['time_meas'])
-				df_b2_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])   
+				df_b2_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])
 				df_b2_he_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['brightness'])
-				df_b2_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['intensity']) 
-				df_b2_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emitv'])     
-				df_b2_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emith'])       	
-				df_b2_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])       	
+				df_b2_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['intensity'])
+				df_b2_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emitv'])
+				df_b2_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emith'])
+				df_b2_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])
 
 				# df_b2_he_start['time_meas']    	  		= pd.Series(self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['time_meas'])
 				# df_b2_he_start['blength']     		  	= pd.Series(self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])
@@ -2671,21 +2671,21 @@ class LumiFollowUp(object):
 
 				## beam 2 - FLATTOP end
 				df_b2_he_end = pd.DataFrame()
-				df_b2_he_end['time_meas'] = np.nan; df_b2_he_end['time_meas']  = df_b2_he_end['time_meas'].astype(object)        
-				df_b2_he_end['blength']   = np.nan; df_b2_he_end['blength']    = df_b2_he_end['blength'].astype(object)          
-				df_b2_he_end['brightness']= np.nan; df_b2_he_end['brightness'] = df_b2_he_end['brightness'].astype(object)       
-				df_b2_he_end['intensity'] = np.nan; df_b2_he_end['intensity']  = df_b2_he_end['intensity'].astype(object)        
-				df_b2_he_end['emitv']     = np.nan; df_b2_he_end['emitv']      = df_b2_he_end['emitv'].astype(object)            
-				df_b2_he_end['emith']     = np.nan; df_b2_he_end['emith']      = df_b2_he_end['emith'].astype(object)   
-				df_b2_he_end['filled_slots']     = np.nan; df_b2_he_end['filled_slots']      = df_b2_he_end['filled_slots'].astype(object)   
+				df_b2_he_end['time_meas'] = np.nan; df_b2_he_end['time_meas']  = df_b2_he_end['time_meas'].astype(object)
+				df_b2_he_end['blength']   = np.nan; df_b2_he_end['blength']    = df_b2_he_end['blength'].astype(object)
+				df_b2_he_end['brightness']= np.nan; df_b2_he_end['brightness'] = df_b2_he_end['brightness'].astype(object)
+				df_b2_he_end['intensity'] = np.nan; df_b2_he_end['intensity']  = df_b2_he_end['intensity'].astype(object)
+				df_b2_he_end['emitv']     = np.nan; df_b2_he_end['emitv']      = df_b2_he_end['emitv'].astype(object)
+				df_b2_he_end['emith']     = np.nan; df_b2_he_end['emith']      = df_b2_he_end['emith'].astype(object)
+				df_b2_he_end['filled_slots']     = np.nan; df_b2_he_end['filled_slots']      = df_b2_he_end['filled_slots'].astype(object)
 
 				df_b2_he_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['time_meas'])
-				df_b2_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['blength'])   
+				df_b2_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['blength'])
 				df_b2_he_end.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['brightness'])
-				df_b2_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['intensity']) 
-				df_b2_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emitv'])     
-				df_b2_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emith'])          
-				df_b2_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])          
+				df_b2_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['intensity'])
+				df_b2_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emitv'])
+				df_b2_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emith'])
+				df_b2_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])
 
 
 
@@ -3629,7 +3629,7 @@ class LumiFollowUp(object):
 		phi_full_rad_CMS   = None
 		# get xing angle info
 		for key in self.XingAngle.keys():
-			print key, filln 
+			print key, filln
 			if filln in range(key[0], key[1]): # >= key[0] and filln<=key[1]:
 				print filln, key, self.XingAngle[key]
 				phi_full_rad_ATLAS  = self.XingAngle[key][0]
@@ -3637,7 +3637,7 @@ class LumiFollowUp(object):
 				info('# runSBModel: Setting crossing angle IP1 = {} , IP5 = {}!'.format(phi_full_rad_ATLAS, phi_full_rad_CMS))
 				break
 			# else:
-			# 	
+			#
 			# 	return
 		if phi_full_rad_ATLAS is None or phi_full_rad_CMS is None:
 			warn('# runSBModel: Crossing angle information for IP1/IP5 not found!')
@@ -3998,7 +3998,7 @@ class LumiFollowUp(object):
 		'''
 		Get measured luminosity from Timber
 		'''
-		
+
 		self.filln_LumiMeasDict.clear()
 		## Get some stuff from SB dictionary
 		if len(self.filln_StableBeamsDict.keys()) > 0:
@@ -4021,16 +4021,16 @@ class LumiFollowUp(object):
 				   self.filln_StableBeamsDict = pickle.load(fid)
 			slots_filled_coll            = self.filln_StableBeamsDict['slots_filled_coll']
 			time_range                   = self.filln_StableBeamsDict['time_range']
-		
+
 		timber_dic = {}
 		timber_dic.update(tm.parse_timber_file(config.BBB_LUMI_DATA_FILE.replace('<FILLNUMBER>',str(filln)), verbose=False))
-		
+
 		self.filln_LumiMeasDict = {"ATLAS" : {'bunch_lumi': []},
 									"CMS"   : {'bunch_lumi': [] } }
 
 		for experiment in ['ATLAS', 'CMS']:
 			lumi = LUMI_bbb.LUMI(timber_dic, experiment=experiment)
-			
+
 			for t in time_range:
 				self.filln_LumiMeasDict[experiment]['bunch_lumi'].append(lumi.nearest_older_sample(t))
 
@@ -4829,7 +4829,7 @@ class LumiFollowUp(object):
 			fig_lumi.suptitle('Fill {}: STABLE BEAMS declared on {}\n{}'.format(filln, tref_string, title_string), fontsize=18)
 			pl.subplots_adjust(top=0.85, bottom=0.1, hspace=0.3)
 			if config.savePlots:
-				
+
 				filename = self.plot_dir.replace("<FILLNUMBER>", str(filln))
 				filename = filename + "fill_{}_sbmodel_{}_luminosity_case{}".format(filln, model_name, case)+self.plotFormat
 				fig_lumi.savefig(filename, dpi=self.plotDpi)
