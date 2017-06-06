@@ -34,7 +34,7 @@ if __name__ == '__main__':
                                    intensity_threshold=config.intensity_threshold, enable_smoothing_BSRT=config.enable_smoothing_BSRT,
                                    avg_time_smoothing=config.avg_time_smoothing, periods=config.periods, doRescale=config.doRescale,
                                    resc_period=config.resc_period, add_resc_string=config.add_resc_string, BASIC_DATA_FILE=config.BASIC_DATA_FILE,
-                                   BBB_DATA_FILE=config.BBB_DATA_FILE, makedirs=config.makedirs, overwriteFiles=config.overwriteFiles,
+                                   BBB_DATA_FILE=config.BBB_DATA_FILE, BBB_LUMI_DATA_FILE=config.BBB_LUMI_DATA_FILE, makedirs=config.makedirs, overwriteFiles=config.overwriteFiles,
                                    SB_dir=config.stableBeams_folder, fill_dir=config.fill_dir, plot_dir=config.plot_dir,
                                    SB_filename=config.SB_filename, SB_fits_filename = config.SB_fits_filename, SB_models=config.models,
                    				   SB_model_filename = config.SB_model_filename , SB_burnoff_filename = config.SB_burnoff_filename,

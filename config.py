@@ -12,7 +12,7 @@ import numpy as np
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 first_fill              = 5005
-last_fill               = 5711 +1 # use + 1 if only used in bmodes
+last_fill               = 5751 +1 # use + 1 if only used in bmodes
 periods                 = {
                             'A': (first_fill,  5256),
                             'B': (5256,     5405),
@@ -27,7 +27,7 @@ periods                 = {
 input_folder            = "/afs/cern.ch/work/l/lumimod/a2017_luminosity_followup/"
 working_folder          = input_folder
 data_folder             = input_folder+"Utilities/"
-# data_folder             = input_folder+"dataFiles/"
+#data_folder             = input_folder+"dataFiles/"
 stableBeams_folder      = working_folder+"SB_analysis/"
 fill_dir                = "fill_<FILLNUMBER>/"
 plot_dir                = "plots/"
@@ -71,16 +71,16 @@ intensity_threshold     = 3.0e10    # intensity threshold
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 t_fit_length            = 2.0*3600  # time in seconds used to fit for SB Fits
-models                  = ['EmpiricalBlowupLosses', # intensities and emittances are taken from data
-							'EmpiricalBlowupBOff',  # emittances taken from data, intensities from model
-							'IBSBOff',  # both emittances and intensities are taken from the model
-							'IBSLosses' # intensities from the data emittances from the model
-						  ]
-cases                   = [1]       #Naming convention for the cases to run e.g [1,2,3,4...]
-correction_factor_1h    = [1.]      #
-correction_factor_2h    = [1.]	  	#	Correction factors to apply to emittances of B1/B2 H/V
-correction_factor_1v    = [1.]		#	1.0 = Uncorrected / 1.1 = 110% = +10% correction factor /
-correction_factor_2v    = [1.]		#					  / 0.9 = 90%  = -10% correction
+models                  = ['EmpiricalBlowupLosses']#, # intensities and emittances are taken from data
+							#'EmpiricalBlowupBOff',  # emittances taken from data, intensities from model
+							#'IBSBOff',  # both emittances and intensities are taken from the model
+							#'IBSLosses' # intensities from the data emittances from the model
+						  #]
+cases                   = [1]#, 12]#1 , 2,   3,     4,       5]       #Naming convention for the cases to run e.g [1,2,3,4...]
+correction_factor_1h    = [1.]#, 0.4372]#1., 0.6, 1.40,   0.704,  1.45]      #
+correction_factor_2h    = [1.]#, 0.2528]#1., 0.6, 0.6,    0.335,  0.65]	  	#	Correction factors to apply to emittances of B1/B2 H/V
+correction_factor_1v    = [1.]#, 0.6139]#1., 1.,  1.,     1.344,  1.344]		#	1.0 = Uncorrected / 1.1 = 110% = +10% correction factor /
+correction_factor_2v    = [1.]#, 0.2413]#1., 1.,  1.,     1.12,   1.12]		#					  / 0.9 = 90%  = -10% correction
 
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -90,6 +90,7 @@ correction_factor_2v    = [1.]		#					  / 0.9 = 90%  = -10% correction
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 BASIC_DATA_FILE         = data_folder+'fill_basic_data_csvs/basic_data_fill_<FILLNUMBER>.csv'
 BBB_DATA_FILE           = data_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_data_fill_<FILLNUMBER>.csv'
+BBB_LUMI_DATA_FILE      = data_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_lumi_data_fill_<FILLNUMBER>.csv'
 fills_bmodes_file       = data_folder+'fills_and_bmodes.pkl'
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -120,7 +121,7 @@ gammaFB                 = 479.6     # relativistic gamma # for 450 GeV
 tauSRxy_FT              = 64.7*3600 # damping times due to synchrotron radiation at FT energy (in s) for transverse plane
 tauSRxy_FB              = np.inf    # damping times due to synchrotron radiation at FB energy (in s) for transverse plane
 tauSRl_FT               = 32.35*3600# damping times due to synchrotron radiation at FT energy (in s) for longitudinal plane
-VRF_FT                  = 10.0e06   # RF Voltage at flat top (in V)
+VRF_FT                  = 12.0e06   # RF Voltage at flat top (in V)
 VRF_FB                  = 6.0e06    # RF Voltage at flat bottom (in V)
 betastar_m              = 0.40      # beta function at IP used for lumi calculation
 sigmaBOff_m2            = 80.0*1.0e-31 # burnoff cross-section
@@ -130,7 +131,10 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
                             (first_fill,    5330)       : [2*185.0e-06, 2*185.0e-06 ],
                             (5330,          5600)       : [2*140.0e-06, 2*140.0e-06 ],
                             (5600,          5700)       : [2*150.0e-06, 2*150.0e-06 ],
-                            (5700,     last_fill)       : [2*140.0e-06, 2*150.0e-06 ],
+                            (5700,          5711)       : [2*140.0e-06, 2*150.0e-06 ],
+	    	            (5711,          5731)       : [2*150.0e-06, 2*150.0e-06 ],
+			    (5731, 	    5738)	: [2*120.0e-06, 2*120.0e-06 ],
+			    (5738,          last_fill)       : [2*150.0e-06, 2*150.0e-06 ],
 
                           }
 
@@ -141,11 +145,11 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 doAllPlots              = True 	# experimental
 
-doCyclePlots            = True 	# make the Cycle Plots
-doCycleModelPlots       = True  # make the Cycle Model Plots
-doSBPlots               = False  # make the SB plots
-doSBModelPlots          = False  # make the SB Model Plots
-doSummaryPlots          = False  # experimental
+doCyclePlots            = False  	# make the Cycle Plots
+doCycleModelPlots       = False  # make the Cycle Model Plots
+doSBPlots               = True  # make the SB plots
+doSBModelPlots          = False # make the SB Model Plots
+doSummaryPlots          = False    # experimental
 
 savePlots               = True
 makePlotTarball         = False
