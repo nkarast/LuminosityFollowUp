@@ -67,12 +67,13 @@ def readYamlDB(filln, year=2016, yamldb='fill_db.yaml', afs_path='/afs/cern.ch/u
     runMassi = False
     # filename for this fill
     filln_filename = '{}.tgz'.format(filln)
-    debug("# readYamlDB : Filename of this fill is {}".format(filln_filename))
-    debug("# readYamlDB : ATLAS modified date in DB : {}".format(database[year]['ATLAS'][filln_filename]))
-    debug("# readYamlDB : CMS   modified date in DB : {}".format(database[year]['CMS'][filln_filename]))
+    
 
     # Check if the file is in the database in case of new file:
     if filln_filename in database[year]['ATLAS'] :
+        debug("# readYamlDB : Filename of this fill is {}".format(filln_filename))
+        # debug("# readYamlDB : ATLAS modified date in DB : {}".format(database[year]['ATLAS'][filln_filename]))
+        # debug("# readYamlDB : CMS   modified date in DB : {}".format(database[year]['CMS'][filln_filename]))
 
         if current_modDate['ATLAS'] == database[year]['ATLAS'][filln_filename]:
             info("# readYamlDB : ATLAS Massi file is up-to-date!")
@@ -102,7 +103,7 @@ def readYamlDB(filln, year=2016, yamldb='fill_db.yaml', afs_path='/afs/cern.ch/u
     # now update the db
     if runMassi:
         warn("# readYamlDB : ATLAS and/or CMS Massi files were updated since last DB entry. Writing Database...")
-        with open('fill_db.yaml', 'w') as fid:
+        with open(yamldb, 'w') as fid:
             yaml.dump(database, fid, default_flow_style=True)
 
     return runMassi

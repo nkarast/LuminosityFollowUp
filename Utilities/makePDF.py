@@ -34,7 +34,8 @@ def main(min_fill, max_fill, bunch_def_dict, outfile_name):
 
 
 	cycle_plots = collections.OrderedDict()
-	cycle_plots["Cycle Emittances"] 	= "fill_<FILLNUMBER>_cycle_emittancesbbb{}".format(config.plotFormat)
+	cycle_plots["Cycle Emittances B1"] 	= "fill_<FILLNUMBER>_cycle_emittancesbbb_b1{}".format(config.plotFormat)
+	cycle_plots["Cycle Emittances B2"]      = "fill_<FILLNUMBER>_cycle_emittancesbbb_b2{}".format(config.plotFormat)
 	cycle_plots["Cycle Intensity"] 		= "fill_<FILLNUMBER>_cycle_intensitiesbbb{}".format(config.plotFormat)
 	cycle_plots["Cycle Bunch Length"] 	= "fill_<FILLNUMBER>_cycle_blengthbbb{}".format(config.plotFormat)
 	cycle_plots["Cycle Brightness"] 	= "fill_<FILLNUMBER>_cycle_brightnessbbb{}".format(config.plotFormat)
@@ -43,7 +44,7 @@ def main(min_fill, max_fill, bunch_def_dict, outfile_name):
 
 
 
-	masked_fills = [x for x in fill_list if x > min_fill and x < max_fill]
+	masked_fills = [x for x in fill_list if x >= min_fill and x <= max_fill]
 	print 'Running for fills : ', masked_fills
 
 
@@ -129,7 +130,7 @@ def main(min_fill, max_fill, bunch_def_dict, outfile_name):
 
 if __name__ == '__main__':
 	
-	min_fill =  5698
+	min_fill =  5737
 	max_fill = 	5750 
 
 
@@ -145,9 +146,12 @@ if __name__ == '__main__':
 						5746 : "25ns_601b_589_522_540_48bpi15inj_bcms",
 						5749 : "25ns_601b_589_522_540_48bpi15inj_bcms",
 						5750 : "25ns_601b_589_522_540_48bpi15inj_bcms",
+						5822 : "Single_10b_9_2_2_BSRT_Calib_RampUp",
+						5824 : "25ns_601_589_523_544_96bpi_12inj_v2",
+						5825 : "25ns_985b_973_872_908_96bpi_15inj",
 
 						}
 
 	outfile_name = "perfPlots_{}_{}_{}.tex".format(min_fill, max_fill, datetime.datetime.now().strftime("%Y%m%d"))
 
-	main(min_fill, max_fill, buncH_def_dict, outfile_name)
+	main(min_fill, max_fill, bunch_def_dict, outfile_name)

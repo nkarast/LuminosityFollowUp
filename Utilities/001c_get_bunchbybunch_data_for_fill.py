@@ -10,13 +10,13 @@ from LHCMeasurementTools.LHC_Fill_LDB_Query import save_variables_and_pickle
 import pickle
 import os
 
-csv_folder = 'fill_bunchbybunch_data_csvs'
+csv_folder = '/eos/user/l/lumimod/2017/fill_bunchbybunch_data_csvs'
 filepath =  csv_folder+'/bunchbybunch_data_fill'
 
 if not os.path.isdir(csv_folder):
     os.mkdir(csv_folder)
 
-fills_pkl_name = 'fills_and_bmodes.pkl'
+fills_pkl_name = '/eos/user/l/lumimod/2017/fills_and_bmodes.pkl'
 with open(fills_pkl_name, 'rb') as fid:
     dict_fill_bmodes = pickle.load(fid)
 

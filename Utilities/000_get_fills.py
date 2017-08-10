@@ -6,13 +6,13 @@ import LHCMeasurementTools.LHC_Fills as Fills
 import config
 
 
-t_start_string = '2016_08_23 00:00:00'
-t_stop_string = '2016_08_31 23:00:00'
+t_start_string = '2017_05_24 00:00:00'
+t_stop_string = '2017_12_31 23:59:00'
 
 t_start = th.localtime2unixstamp(t_start_string)
 t_stop = th.localtime2unixstamp(t_stop_string)
 
-filename = 'fills_and_bmodes'
+filename = '/eos/user/l/lumimod/2017/fills_and_bmodes'
 csv_name = filename + '.csv'
 pkl_name = filename + '.pkl'
 

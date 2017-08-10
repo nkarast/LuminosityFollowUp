@@ -15,18 +15,18 @@
 
 import sys, os
 ## For LHC Measurement Tools
-BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/")
-sys.path.append(BIN)
+# BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/")
+# sys.path.append(BIN)
 ## For BSRT rescale
-BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/")
-sys.path.append(BIN)
+# BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/")
+# sys.path.append(BIN)
 
 ## Where the code is:
 BIN = os.path.expanduser("/afs/cern.ch/user/l/lumimod/lumimod/a2017_luminosity_followup/")
 sys.path.append(BIN)
 
 # lumi model
-BIN = os.path.expanduser("/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/PyLHCLumiModel/")
+BIN = os.path.expanduser("/afs/cern.ch/user/l/lumimod/lumimod/a2017_luminosity_followup/PyLHCLumiModel/")
 sys.path.append(BIN)
 
 import matplotlib
@@ -44,6 +44,7 @@ import LHCMeasurementTools.TimberManager as tm
 import LHCMeasurementTools.mystyle as ms
 import LHCMeasurementTools.LHC_Lumi as LUMI
 import LHCMeasurementTools.LHC_Lumi_bbb as LUMI_bbb
+import LHCMeasurementTools.LHC_Crossing as XING
 # import BSRT_calib_rescale as BSRT_calib
 import LHCMeasurementTools.BSRT_calib_rescale as BSRT_calib
 from IBSmodel_GY import IBSmodel
@@ -62,6 +63,8 @@ import tarfile
 from glob import glob
 from logging import *
 from datetime import datetime
+import matplotlib.dates as mdates
+from dateutil import tz
 import argparse
 import socket
 import Utilities.readYamlDB as db
@@ -76,6 +79,7 @@ class LumiFollowUp(object):
 				avg_time_smoothing = 3.0*3600.0, periods = {'A': (5005,  5256), 'B': (5256,     5405), 'C': (5405,     5456+1)},
 				doRescale = True, resc_period = [('A', 'C'), ('B','C'), ('C', 'C')], add_resc_string = '',
 				BASIC_DATA_FILE = '/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/fill_basic_data_csvs/basic_data_fill_<FILLNUMBER>.csv',
+				BASIC_CROSSING_FILE='/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/fill_basic_data_csvs/crossing_angle_fill_<FILLNUMBER>.csv',
 				BBB_DATA_FILE = '/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/fill_bunchbybunch_data_csvs/bunchbybunch_data_fill_<FILLNUMBER>.csv',
 				BBB_LUMI_DATA_FILE = '/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/fill_bunchbybunch_data_csvs/bunchbybunch_lumi_data_fill_<FILLNUMBER>.csv',
 				makedirs = True, overwriteFiles = False, SB_dir = 'SB_analysis/',
@@ -185,8 +189,10 @@ class LumiFollowUp(object):
 		## --- input data files
 		self.fills_bmodes_file       = fills_bmodes_file
 		self.BASIC_DATA_FILE         = BASIC_DATA_FILE
+		self.BASIC_CROSSING_FILE	 = BASIC_CROSSING_FILE
 		self.BBB_DATA_FILE           = BBB_DATA_FILE
 		self.BBB_LUMI_DATA_FILE	 	 = BBB_LUMI_DATA_FILE
+
 
 		##  --- fill & Stable beams info
 		self.fill                    = fill
@@ -536,12 +542,12 @@ class LumiFollowUp(object):
 
 		######################################################     RESCALING     ############################################################
 		if self.doRescale:
-			import BSRT_calib_rescale as BSRT_calib
+			#import BSRT_calib_rescale as BSRT_calib
 			bmodes['rescaledPeriod'] = np.nan
 			for res in self.resc_period:
 				bmodes['rescaledPeriod'][bmodes['period']==res[0]]=res[1]
 		else:
-			import BSRT_calib as BSRT_calib
+			#import BSRT_calib as BSRT_calib
 			bmodes['rescaledPeriod'] = bmodes['period'] # @TODO IS THIS NEEDED?
 
 
@@ -562,8 +568,15 @@ class LumiFollowUp(object):
 		timber_dic = {}
 		timber_dic.update(tm.parse_timber_file(self.BASIC_DATA_FILE.replace('<FILLNUMBER>',str(filln)), verbose=self.debug))
 		timber_dic.update(tm.parse_timber_file(self.BBB_DATA_FILE.replace('<FILLNUMBER>',str(filln)), verbose=self.debug))
+		crossingInfo = 1
+		try:
+			timber_dic.update(tm.parse_timber_file(self.BASIC_CROSSING_FILE.replace('<FILLNUMBER>',str(filln)), verbose=self.debug))
+		except:
+			warn("#getTimberDic: No Crossing Angle information for fill {}".format(filln))
+			crossingInfo = 0
+
 		# timber_dic.update(tm.parse_timber_file(self.BBB_LUMI_DATA_FILE.replace('<FILLNUMBER>',str(filln)), verbose=self.debug))
-		return timber_dic
+		return timber_dic, crossingInfo
 	## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 	def getBSRTCalibDic(self, filln):
 		'''
@@ -571,10 +584,13 @@ class LumiFollowUp(object):
 		Input:      filln   = fill number
 		Returns:    bsrt_calib_dict = dictionary from the BSRT calibration
 		'''
-		if self.bmodes['period'][filln]!=self.bmodes['rescaledPeriod'][filln]:
-			bsrt_calib_dict = BSRT_calib.emittance_dictionary(filln=filln, rescale=True, period = self.bmodes['rescaledPeriod'][filln])
+		if self.doRescale:
+			if self.bmodes['period'][filln]!=self.bmodes['rescaledPeriod'][filln]:
+				bsrt_calib_dict = BSRT_calib.emittance_dictionary(filln=filln, rescale=True, period = self.bmodes['rescaledPeriod'][filln])
+			else:
+				bsrt_calib_dict = BSRT_calib.emittance_dictionary(filln=filln, rescale=False, period = self.bmodes['period'][filln])
 		else:
-			bsrt_calib_dict = BSRT_calib.emittance_dictionary(filln=filln, rescale=False, period = self.bmodes['period'][filln])
+			bsrt_calib_dict = BSRT_calib.emittance_dictionary(filln=filln, rescale=False, period = None)
 		return bsrt_calib_dict
 	## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 	def getCycleDataTimes(self, filln):
@@ -630,7 +646,8 @@ class LumiFollowUp(object):
 		## Create empty dictionaries for BCT and fast-BCT
 		bct_dict  = {1:[], 2:[]}
 		fbct_dict = {1:[], 2:[]}
-		return eh_interp_raw, ev_interp_raw, eh_interp, ev_interp, b_inten_interp, bl_interp_m, slots_filled, bct_dict, fbct_dict
+		xing_dict = {1:[], 5:[]}
+		return eh_interp_raw, ev_interp_raw, eh_interp, ev_interp, b_inten_interp, bl_interp_m, slots_filled, bct_dict, fbct_dict, xing_dict
 	## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 	def makeCyclePlots(self, dict_intervals_two_beams, filln, t_ref):
 		'''
@@ -656,9 +673,9 @@ class LumiFollowUp(object):
 		##### BBB Emittances
 		info('#makeCyclePlots : Fill {} -> Making Cycle Emittances bbb plot...'.format(filln))
 		pl.close('all')
-		fig_bbbemit = pl.figure("Emittances", figsize=(14, 7))
+		fig_bbbemit = pl.figure("Emittances B1", figsize=(14, 7))
 		fig_bbbemit.set_facecolor('w')
-		ax_b1_h = pl.subplot(4,1,1)
+		ax_b1_h = pl.subplot(2,1,1)
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 1 -  H
 		ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith'])), '.', color='blue',   markersize=8, label='Injected')
@@ -667,6 +684,7 @@ class LumiFollowUp(object):
 		ax_b1_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b1_h.set_ylabel("B1 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
 		ax_b1_h.minorticks_on()
+		ax_b1_h.set_ylim(0,6)
 		ax_b1_h.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emith']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emith']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emith']))),
@@ -683,7 +701,7 @@ class LumiFollowUp(object):
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 1 -  V
 
-		ax_b1_v = pl.subplot(4,1,2)
+		ax_b1_v = pl.subplot(2,1,2, sharex=ax_b1_h, sharey=ax_b1_h)
 
 		ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv'])), '.', color='blue',   markersize=8, label='Injected')
 		ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv'])),   '.', color='orange', markersize=8, label='Start Ramp')
@@ -691,6 +709,8 @@ class LumiFollowUp(object):
 		ax_b1_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",  "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emitv'])),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b1_v.set_ylabel("B1 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
 		ax_b1_v.minorticks_on()
+		ax_b1_v.set_ylim(0,6)
+		ax_b1_v.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b1_v.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv']))),
@@ -705,7 +725,9 @@ class LumiFollowUp(object):
 
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 2  - H
-		ax_b2_h = pl.subplot(4,1,3)
+		fig_bbbemit2 = pl.figure("Emittances B2", figsize=(14, 7))
+		fig_bbbemit2.set_facecolor('w')
+		ax_b2_h = pl.subplot(2,1,1)
 
 		ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith'])), '.', color='blue',   markersize=8, label='Injected')
 		ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith'])),   '.', color='orange', markersize=8, label='Start Ramp')
@@ -713,6 +735,7 @@ class LumiFollowUp(object):
 		ax_b2_h.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",  "at_end",     mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['emith'])),    '.', color='red',    markersize=8, label='Start SB')
 		ax_b2_h.set_ylabel("B2 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
 		ax_b2_h.minorticks_on()
+		ax_b2_h.set_ylim(0,6)
 		ax_b2_h.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith']))),
@@ -727,7 +750,7 @@ class LumiFollowUp(object):
 
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 2  - V
-		ax_b2_v = pl.subplot(4,1,4)
+		ax_b2_v = pl.subplot(2,1,2, sharex=ax_b2_h, sharey=ax_b2_h)
 
 		ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv'])), '.', color='blue',   markersize=8, label='Injected')
 		ax_b2_v.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",     "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv'])),   '.', color='orange', markersize=8, label='Start Ramp')
@@ -736,6 +759,7 @@ class LumiFollowUp(object):
 		ax_b2_v.set_ylabel("B2 $\mathbf{\epsilon_{V}}$ [$\mathbf{\mu}$m]", fontsize=14, fontweight='bold')
 		ax_b2_v.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b2_v.minorticks_on()
+		ax_b2_v.set_ylim(0,6)
 		ax_b2_v.text(0.5, 0.9, "Injected: {:.2f}$\pm${:.2f} | Start Ramp: {:.2f}$\pm${:.2f} | End Ramp: {:.2f}$\pm${:.2f} | Start SB: {:.2f}$\pm${:.2f}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emitv']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),  np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emitv']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emitv']))),
@@ -753,12 +777,15 @@ class LumiFollowUp(object):
 		subtitle    = 'Fill {} : Started on {}'.format(filln, tref_string)
 
 		fig_bbbemit.suptitle(subtitle, fontsize=16, fontweight='bold')
+		fig_bbbemit2.suptitle(subtitle, fontsize=16, fontweight='bold')
 		pl.subplots_adjust(hspace=0.5, left=0.1, right=0.8)#, right=0.02, left=0.01)
 
+		
 		if config.savePlots:
-			filename = self.plot_dir.replace("<FILLNUMBER>", str(filln))+"fill_{}_cycle_emittancesbbb".format(filln)+self.plotFormat
+			filename = self.plot_dir.replace("<FILLNUMBER>", str(filln))+"fill_{}_cycle_emittancesbbb_<BEAM>".format(filln)+self.plotFormat
 			print filename
-			pl.savefig(filename, dpi=self.plotDpi)
+			fig_bbbemit.savefig(filename.replace("<BEAM>", 'b1'), dpi=self.plotDpi)
+			fig_bbbemit2.savefig(filename.replace("<BEAM>", 'b2'), dpi=self.plotDpi)
 
 
 		#################
@@ -895,11 +922,11 @@ class LumiFollowUp(object):
 
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 1
-		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength'])), '.', color='blue',   markersize=8, label='Injected')
-		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength'])),   '.', color='orange', markersize=8, label='Start Ramp')
-		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength'])),  '.', color='green',  markersize=8, label='End Ramp')
-		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength'])),    '.', color='red',    markersize=8, label='Start SB')
-		ax_b1.set_ylabel("B1 Bunch Length [p/b]", fontsize=12, fontweight='bold')
+		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))/1.0e-9, '.', color='blue',   markersize=8, label='Injected')
+		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))/1.0e-9,   '.', color='orange', markersize=8, label='Start Ramp')
+		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['blength']))/1.0e-9,  '.', color='green',  markersize=8, label='End Ramp')
+		ax_b1.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_1", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['blength']))/1.0e-9,    '.', color='red',    markersize=8, label='Start SB')
+		ax_b1.set_ylabel("B1 Bunch Length [ns]", fontsize=12, fontweight='bold')
 		ax_b1.minorticks_on()
 		ax_b1.text(0.5, 0.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['blength']))),
 					   np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['blength']))),
@@ -913,17 +940,17 @@ class LumiFollowUp(object):
 		# Put a legend to the right of the current axis
 		ax_b1.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14, numpoints=1)
 		ax_b1.grid('on', which='both')
-		ax_b1.set_ylim(0.5e-09, 1.5e-09)
+		ax_b1.set_ylim(0.5, 1.5)
 
 
 		# - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - -
 		# beam 2
 		ax_b2 = pl.subplot(2,1,2)
-		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength'])), '.', color='blue',   markersize=8, label='Injected')
-		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength'])),   '.', color='orange', markersize=8, label='Start Ramp')
-		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength'])),  '.', color='green',  markersize=8, label='End Ramp')
-		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength'])),    '.', color='red',    markersize=8, label='Start SB')
-		ax_b2.set_ylabel("B2 Bunch Length [p/b]", fontsize=12, fontweight='bold')
+		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))/1.0e-9, '.', color='blue',   markersize=8, label='Injected')
+		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "Injection",       "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['blength']))/1.0e-9,   '.', color='orange', markersize=8, label='Start Ramp')
+		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_start",  mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['blength']))/1.0e-9,  '.', color='green',  markersize=8, label='End Ramp')
+		ax_b2.plot(getFilledSlotsArray(dict_intervals_two_beams, "beam_2", "he_before_SB",    "at_end",    mask_invalid=True), ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_end']['blength']))/1.0e-9,    '.', color='red',    markersize=8, label='Start SB')
+		ax_b2.set_ylabel("B2 Bunch Length [ns]", fontsize=12, fontweight='bold')
 		ax_b2.set_xlabel("Bunch Slots [25ns]", fontsize=14, fontweight='bold')
 		ax_b2.minorticks_on()
 		ax_b2.text(0.5, 0.1, "Injected: {:.2e}$\pm${:.2e} | Start Ramp: {:.2e}$\pm${:.2e} | End Ramp: {:.2e}$\pm${:.2e} | Start SB: {:.2e}$\pm${:.2e}".format(np.mean(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))), np.std(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['blength']))),
@@ -938,7 +965,7 @@ class LumiFollowUp(object):
 		# Put a legend to the right of the current axis
 		ax_b2.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=14, numpoints=1)
 		ax_b2.grid('on', which='both')
-		ax_b2.set_ylim(0.5e-09, 1.5e-09)
+		ax_b2.set_ylim(0.5, 1.5)
 
 		# tref string
 		tref_string = datetime.fromtimestamp(t_ref)
@@ -1054,7 +1081,6 @@ class LumiFollowUp(object):
 		ax_emit_b1_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_end']['emith'])),       range=(0, 5),   bins=50, color='red',    histtype='step', lw=2,  label='Start SB')
 		ax_emit_b1_h.set_ylabel('Entries', fontweight='bold', fontsize=8)
 		ax_emit_b1_h.set_xlabel('B1 $\mathbf{\epsilon_{H}}$ [$\mathbf{\mu}$m]', fontweight='bold', fontsize=8)
-
 		## Shrink current axis by 20%
 		box = ax_emit_b1_h.get_position()
 		ax_emit_b1_h.set_position([box.x0, box.y0, box.width*0.9, box.height])
@@ -1068,7 +1094,7 @@ class LumiFollowUp(object):
 					   bbox=dict(facecolor='white', edgecolor='gray', boxstyle='round,pad=0.5', alpha=0.7), fontweight='bold', fontsize=7)
 
 
-		ax_emit_b1_v = pl.subplot(4,2,3)
+		ax_emit_b1_v = pl.subplot(4,2,3, sharex=ax_emit_b1_h , sharey=ax_emit_b1_h)
 		ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_start']['emitv'])),    range=(0, 5),   bins=50, color='blue',    histtype='step', lw=2, label='Injected')
 		ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['Injection']['at_end']['emitv'])),      range=(0, 5),   bins=50, color='orange',  histtype='step', lw=2, label='Start Ramp')
 		ax_emit_b1_v.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_1']['he_before_SB']['at_start']['emitv'])),     range=(0, 5),   bins=50, color='green',   histtype='step', lw=2, label='End Ramp')
@@ -1088,7 +1114,7 @@ class LumiFollowUp(object):
 		ax_emit_b1_v.grid('on', which='both')
 
 
-		ax_emit_b2_h = pl.subplot(4,2,5)
+		ax_emit_b2_h = pl.subplot(4,2,5,  sharex=ax_emit_b1_h , sharey=ax_emit_b1_h)
 		ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_start']['emith'])),    range=(0, 5),   bins=50, color='blue',   histtype='step', lw=2, label='Injected')
 		ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['Injection']['at_end']['emith'])),      range=(0, 5),   bins=50, color='orange', histtype='step', lw=2, label='Start Ramp')
 		ax_emit_b2_h.hist(ma.masked_invalid(np.array(dict_intervals_two_beams['beam_2']['he_before_SB']['at_start']['emith'])),     range=(0, 5),   bins=50, color='green',  histtype='step', lw=2, label='End Ramp')
@@ -1125,6 +1151,12 @@ class LumiFollowUp(object):
 		box = ax_emit_b2_v.get_position()
 		ax_emit_b2_v.set_position([box.x0, box.y0, box.width*0.9, box.height])
 		# Put a legend to the right of the current axis
+
+		# ax_emit_b1_h.set_ylim(0,5)
+		# ax_emit_b1_v.set_ylim(0,5)
+		# ax_emit_b2_h.set_ylim(0,5)
+		# ax_emit_b2_v.set_ylim(0,5)
+
 		ax_emit_b2_v.legend(loc='center left', bbox_to_anchor=(1, 0.5), fontsize=12)
 		ax_emit_b2_v.grid('on', which='both')
 
@@ -1343,11 +1375,16 @@ class LumiFollowUp(object):
 				debug('#checkFiles : Checking if Pandas pickle for Massi file [{}] for fill {} exists [{}]'.format(massi_filename, filln, (not getMassi) ))
 
 			##-- also check the database for changed modification date:
+			# restore massi filename to dictionary
+			print '@ checkfiles : ', massi_filename
+			# massi_filename = massi_filename.replace("_df.pkl.gz", ".pkl.gz")
 			tempGetMassi = db.readYamlDB(filln, year=self.fill_year, yamldb=self.fill_yaml_database, afs_path=self.massi_afs_path, exp_folders=self.massi_exp_folders)
 			if getMassi == True:
 				## if the file is missing then it will be downloaded, but also force the DB to be updated
 				getMassi = True
 			elif getMassi == False and tempGetMassi == True:
+				massi_filename = self.fill_dir+self.Massi_filename
+				massi_filename = massi_filename.replace('<FILLNUMBER>',str(filln))
 				## if the file exists but the modification date is changed, force to download it
 				getMassi = True
 				#rename the old massi file
@@ -1355,8 +1392,8 @@ class LumiFollowUp(object):
 				print massi_filename, massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d")))
 				os.rename(massi_filename, massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
 				if self.savePandas:
-					os.rename(massi_filename.replace('.pkl.gz', '_df.pkl.gz'), massi_filename.replace('.pkl.gz', '_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
-
+					os.rename(massi_filename.replace('.pkl.gz', '_df.pkl.gz'), massi_filename.replace('_df.pkl.gz', '_df_{}.pkl.gz'.format(datetime.now().strftime("%Y%m%d"))))
+		
 		if getTimber:
 			massi_filename = self.fill_dir+self.Massi_filename.replace('meas', 'timber_meas')
 			if os.path.exists(massi_filename):
@@ -1820,7 +1857,7 @@ class LumiFollowUp(object):
 
 		## get timber data for fill
 		debug('#runCycleSB : Getting Timber dictionary for fill {}'.format(filln))
-		timber_dic = self.getTimberDic(filln)
+		timber_dic, crossingInfo = self.getTimberDic(filln)
 
 		## get BSRT calibration dict
 		debug('#runCycleSB : Getting BSRT calibration dictionary for fill {}'.format(filln))
@@ -1828,7 +1865,7 @@ class LumiFollowUp(object):
 
 		## Create empty SB dicts
 		t_start_STABLE, t_end_STABLE, time_range, N_steps = self.getSBDataTimes(filln)
-		eh_interp_raw, ev_interp_raw, eh_interp, ev_interp, b_inten_interp, bl_interp_m, slots_filled, bct_dict, fbct_dict = self.getEmptySBDataDict()
+		eh_interp_raw, ev_interp_raw, eh_interp, ev_interp, b_inten_interp, bl_interp_m, slots_filled, bct_dict, fbct_dict, xing_dict = self.getEmptySBDataDict()
 		frac_smoothing = self.getFracSmoothing(filln, self.avg_time_smoothing, t_end_STABLE, t_start_STABLE)
 
 		if doCycle:
@@ -1838,6 +1875,37 @@ class LumiFollowUp(object):
 				dict_intervals_two_beams['beam_{}'.format(beam_n)] = {}
 
 		debug('#runCycleSB : Looping for the two beams for fill {}'.format(filln))
+		
+		if crossingInfo > 0:
+			xing1 = XING.Crossing(timber_dic, IP=1)
+			xing5 = XING.Crossing(timber_dic, IP=5)
+			print xing1, xing5
+
+			xing_dict[1]= (np.interp(time_range, xing1.t_stamps, xing1.xing)*2.0*1.0e-06).T
+			xing_dict[5]= (np.interp(time_range, xing5.t_stamps, xing5.xing)*2.0*1.0e-06).T
+		else:
+
+			xing_IP1 = 0
+			xing_IP5 = 0
+			for key in self.XingAngle.keys():
+				if filln in range(key[0], key[1]): # >= key[0] and filln<=key[1]:
+					print filln, key, self.XingAngle[key]
+					xing_IP1  = self.XingAngle[key][0]/2.0
+					xing_IP5    = self.XingAngle[key][1]/2.0
+					info('# runCycleSB: Setting crossing angle IP1 = {} , IP5 = {}!'.format(xing_IP1, xing_IP5))
+					break
+				
+			if xing_IP1 == 0  or xing_IP5 == None:
+				warn('# runCycleSB: Crossing angle information for IP1/IP5 not found!')
+				return
+
+			xing_dict[1] = np.ones(len(time_range))*xing_IP1
+			xing_dict[5] = np.ones(len(time_range))*xing_IP5
+
+		print xing_dict[1]
+
+
+
 		for beam_n in [1,2]:
 			debug('#runCycleSB : Running for beam {}...'.format(beam_n))
 			## Energy, BCT, BSRT, FBCT, BQM are from LHCMeasurementTools
@@ -2245,6 +2313,7 @@ class LumiFollowUp(object):
 		'tau_inten_noncoll_full'     : tau_inten_noncoll_full,
 		'init_inten_coll_full'       : init_inten_coll_full,
 		'init_inten_noncoll_full'    : init_inten_noncoll_full,
+		'xing_angle' 				 : xing_dict,
 
 		}
 
@@ -2335,7 +2404,7 @@ class LumiFollowUp(object):
 				# b1_inj_at_end_emitv     	= self.filln_CycleDict['beam_1']['Injection']['at_end']['emith']
 
 
-
+				
 
 				# b2_inj_t_start      = self.filln_CycleDict['beam_2']['Injection']['t_start']
 				# b2_inj_t_end        = self.filln_CycleDict['beam_2']['Injection']['t_end']
@@ -2354,7 +2423,7 @@ class LumiFollowUp(object):
 				# b2_inj_at_end_intensity   	= self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity']
 				# b2_inj_at_end_emith     	= self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv']
 				# b2_inj_at_end_emitv     	= self.filln_CycleDict['beam_2']['Injection']['at_end']['emith']
-
+				
 
 				# b1_he_t_start       		= self.filln_CycleDict['beam_1']['he_before_SB']['t_start']
 				# b1_he_t_end         		= self.filln_CycleDict['beam_1']['he_before_SB']['t_end']
@@ -2375,7 +2444,7 @@ class LumiFollowUp(object):
 				# b1_he_at_end_emith     		= self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv']
 				# b1_he_at_end_emitv     		= self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith']
 
-
+				
 
 				# b2_he_t_start       		= self.filln_CycleDict['beam_2']['he_before_SB']['t_start']
 				# b2_he_t_end         		= self.filln_CycleDict['beam_2']['he_before_SB']['t_end']
@@ -2405,12 +2474,12 @@ class LumiFollowUp(object):
 				df_b1_inj_start['emitv']      = np.nan; df_b1_inj_start['emitv']     = df_b1_inj_start['emitv'].astype(object)
 				df_b1_inj_start['emith']      = np.nan; df_b1_inj_start['emith']     = df_b1_inj_start['emith'].astype(object)
 				df_b1_inj_start['filled_slots']      = np.nan; df_b1_inj_start['filled_slots']     = df_b1_inj_start['filled_slots'].astype(object)
-
+				
 				df_b1_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['Injection']['at_start']['time_meas'])
-				df_b1_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_start']['blength'])
+				df_b1_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_start']['blength'])   
 				df_b1_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['Injection']['at_start']['brightness'])
-				df_b1_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity'])
-				df_b1_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])
+				df_b1_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity']) 
+				df_b1_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])     
 				df_b1_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_start']['emith'])
 				df_b1_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])
 
@@ -2423,7 +2492,7 @@ class LumiFollowUp(object):
 				# df_b1_inj_start['intensity']       	  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['intensity'])
 				# df_b1_inj_start['emitv']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['emitv'])
 				# df_b1_inj_start['emith']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_start']['emith'])
-
+	
 				df_b1_inj_start.insert(0, 'timestamp_end'  , self.filln_CycleDict['beam_1']['Injection']['t_end']*len(df_b1_inj_start))
 				# df_b1_inj_start.insert(0, 'datetime_end'   , self.convertToLocalTime(df_b1_inj_start['timestamp_end']))
 				df_b1_inj_start.insert(0, 'timestamp_start', self.filln_CycleDict['beam_1']['Injection']['t_start']*len(df_b1_inj_start))
@@ -2439,21 +2508,21 @@ class LumiFollowUp(object):
 				## beam 1 - injection end
 				df_b1_inj_end = pd.DataFrame()
 
-				df_b1_inj_end['time_meas']  = np.nan ; df_b1_inj_end['time_meas']  = df_b1_inj_end['time_meas'].astype(object)
-				df_b1_inj_end['blength']    = np.nan ; df_b1_inj_end['blength']    = df_b1_inj_end['blength'].astype(object)
-				df_b1_inj_end['brightness'] = np.nan ; df_b1_inj_end['brightness'] = df_b1_inj_end['brightness'].astype(object)
-				df_b1_inj_end['intensity']  = np.nan ; df_b1_inj_end['intensity']  = df_b1_inj_end['intensity'].astype(object)
-				df_b1_inj_end['emitv']      = np.nan ; df_b1_inj_end['emitv']      = df_b1_inj_end['emitv'].astype(object)
-				df_b1_inj_end['emith']      = np.nan ; df_b1_inj_end['emith']      = df_b1_inj_end['emith'].astype(object)
-				df_b1_inj_end['filled_slots']      = np.nan ; df_b1_inj_end['filled_slots']      = df_b1_inj_end['filled_slots'].astype(object)
+				df_b1_inj_end['time_meas']  = np.nan ; df_b1_inj_end['time_meas']  = df_b1_inj_end['time_meas'].astype(object)  
+				df_b1_inj_end['blength']    = np.nan ; df_b1_inj_end['blength']    = df_b1_inj_end['blength'].astype(object)    
+				df_b1_inj_end['brightness'] = np.nan ; df_b1_inj_end['brightness'] = df_b1_inj_end['brightness'].astype(object) 
+				df_b1_inj_end['intensity']  = np.nan ; df_b1_inj_end['intensity']  = df_b1_inj_end['intensity'].astype(object)  
+				df_b1_inj_end['emitv']      = np.nan ; df_b1_inj_end['emitv']      = df_b1_inj_end['emitv'].astype(object)      
+				df_b1_inj_end['emith']      = np.nan ; df_b1_inj_end['emith']      = df_b1_inj_end['emith'].astype(object)   
+				df_b1_inj_end['filled_slots']      = np.nan ; df_b1_inj_end['filled_slots']      = df_b1_inj_end['filled_slots'].astype(object)   
 
 				df_b1_inj_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['Injection']['at_end']['time_meas'])
-				df_b1_inj_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])
+				df_b1_inj_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])   
 				df_b1_inj_end.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['Injection']['at_end']['brightness'])
-				df_b1_inj_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity'])
-				df_b1_inj_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])
-				df_b1_inj_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])
-				df_b1_inj_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])
+				df_b1_inj_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity']) 
+				df_b1_inj_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])     
+				df_b1_inj_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])        
+				df_b1_inj_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['Injection']['filled_slots'])        
 
 				# df_b1_inj_end['time_meas']    	  			= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['time_meas'])
 				# df_b1_inj_end['blength']     		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['blength'])
@@ -2461,7 +2530,7 @@ class LumiFollowUp(object):
 				# df_b1_inj_end['intensity']       	  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['intensity'])
 				# df_b1_inj_end['emitv']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['emitv'])
 				# df_b1_inj_end['emith']       		  		= pd.Series(self.filln_CycleDict['beam_1']['Injection']['at_end']['emith'])
-
+				
 
 
 				df_b1_inj_end.insert(0, 'timestamp_end'  , self.filln_CycleDict['beam_1']['Injection']['t_end']*len(df_b1_inj_end))
@@ -2480,21 +2549,21 @@ class LumiFollowUp(object):
 				## beam 2 - injection start
 				df_b2_inj_start = pd.DataFrame()
 
-				df_b2_inj_start['time_meas']  = np.nan ; df_b2_inj_start['time_meas']  = df_b2_inj_start['time_meas'].astype(object)
-				df_b2_inj_start['blength']    = np.nan ; df_b2_inj_start['blength']    = df_b2_inj_start['blength'].astype(object)
-				df_b2_inj_start['brightness'] = np.nan ; df_b2_inj_start['brightness'] = df_b2_inj_start['brightness'].astype(object)
-				df_b2_inj_start['intensity']  = np.nan ; df_b2_inj_start['intensity']  = df_b2_inj_start['intensity'].astype(object)
-				df_b2_inj_start['emitv']      = np.nan ; df_b2_inj_start['emitv']      = df_b2_inj_start['emitv'].astype(object)
-				df_b2_inj_start['emith']      = np.nan ; df_b2_inj_start['emith']      = df_b2_inj_start['emith'].astype(object)
-				df_b2_inj_start['filled_slots']      = np.nan ; df_b2_inj_start['filled_slots']      = df_b2_inj_start['filled_slots'].astype(object)
+				df_b2_inj_start['time_meas']  = np.nan ; df_b2_inj_start['time_meas']  = df_b2_inj_start['time_meas'].astype(object)     
+				df_b2_inj_start['blength']    = np.nan ; df_b2_inj_start['blength']    = df_b2_inj_start['blength'].astype(object)       
+				df_b2_inj_start['brightness'] = np.nan ; df_b2_inj_start['brightness'] = df_b2_inj_start['brightness'].astype(object)    
+				df_b2_inj_start['intensity']  = np.nan ; df_b2_inj_start['intensity']  = df_b2_inj_start['intensity'].astype(object)     
+				df_b2_inj_start['emitv']      = np.nan ; df_b2_inj_start['emitv']      = df_b2_inj_start['emitv'].astype(object)         
+				df_b2_inj_start['emith']      = np.nan ; df_b2_inj_start['emith']      = df_b2_inj_start['emith'].astype(object)         
+				df_b2_inj_start['filled_slots']      = np.nan ; df_b2_inj_start['filled_slots']      = df_b2_inj_start['filled_slots'].astype(object)         
 
 				df_b2_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['Injection']['at_start']['time_meas'])
-				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_start']['blength'])
+				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_start']['blength'])   
 				df_b2_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['Injection']['at_start']['brightness'])
-				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_start']['intensity'])
-				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_start']['emitv'])
-				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_start']['emith'])
-				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])
+				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_start']['intensity']) 
+				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_start']['emitv'])     
+				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_start']['emith'])        
+				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])        
 
 
 				# df_b2_inj_start['time_meas']    	  = pd.Series(self.filln_CycleDict['beam_2']['Injection']['at_start']['time_meas'])
@@ -2518,21 +2587,21 @@ class LumiFollowUp(object):
 
 				## beam 2 - injection end
 				df_b2_inj_end = pd.DataFrame()
-				df_b2_inj_end['time_meas']  = np.nan ; df_b2_inj_end['time_meas']   = df_b2_inj_end['time_meas'].astype(object)
-				df_b2_inj_end['blength']    = np.nan ; df_b2_inj_end['blength']     = df_b2_inj_end['blength'].astype(object)
-				df_b2_inj_end['brightness'] = np.nan ; df_b2_inj_end['brightness']  = df_b2_inj_end['brightness'].astype(object)
-				df_b2_inj_end['intensity']  = np.nan ; df_b2_inj_end['intensity']   = df_b2_inj_end['intensity'].astype(object)
-				df_b2_inj_end['emitv']      = np.nan ; df_b2_inj_end['emitv']       = df_b2_inj_end['emitv'].astype(object)
-				df_b2_inj_end['emith']      = np.nan ; df_b2_inj_end['emith']       = df_b2_inj_end['emith'].astype(object)
-				df_b2_inj_end['filled_slots']      = np.nan ; df_b2_inj_end['filled_slots']       = df_b2_inj_end['filled_slots'].astype(object)
+				df_b2_inj_end['time_meas']  = np.nan ; df_b2_inj_end['time_meas']   = df_b2_inj_end['time_meas'].astype(object)           
+				df_b2_inj_end['blength']    = np.nan ; df_b2_inj_end['blength']     = df_b2_inj_end['blength'].astype(object)             
+				df_b2_inj_end['brightness'] = np.nan ; df_b2_inj_end['brightness']  = df_b2_inj_end['brightness'].astype(object)          
+				df_b2_inj_end['intensity']  = np.nan ; df_b2_inj_end['intensity']   = df_b2_inj_end['intensity'].astype(object)           
+				df_b2_inj_end['emitv']      = np.nan ; df_b2_inj_end['emitv']       = df_b2_inj_end['emitv'].astype(object)               
+				df_b2_inj_end['emith']      = np.nan ; df_b2_inj_end['emith']       = df_b2_inj_end['emith'].astype(object)      
+				df_b2_inj_end['filled_slots']      = np.nan ; df_b2_inj_end['filled_slots']       = df_b2_inj_end['filled_slots'].astype(object)      
 
 				df_b2_inj_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['Injection']['at_end']['time_meas'])
-				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_end']['blength'])
+				df_b2_inj_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['Injection']['at_end']['blength'])   
 				df_b2_inj_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['Injection']['at_end']['brightness'])
-				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity'])
-				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv'])
-				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_end']['emith'])
-				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])
+				df_b2_inj_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['Injection']['at_end']['intensity']) 
+				df_b2_inj_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['Injection']['at_end']['emitv'])     
+				df_b2_inj_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['Injection']['at_end']['emith'])                 
+				df_b2_inj_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['Injection']['filled_slots'])                 
 
 
 
@@ -2559,21 +2628,21 @@ class LumiFollowUp(object):
 				######## FLATTOP
 				## beam 1 - FLATTOP start
 				df_b1_he_start = pd.DataFrame()
-				df_b1_he_start['time_meas']  = np.nan ; df_b1_he_start['time_meas']  = df_b1_he_start['time_meas'].astype(object)
-				df_b1_he_start['blength']    = np.nan ; df_b1_he_start['blength']    = df_b1_he_start['blength'].astype(object)
+				df_b1_he_start['time_meas']  = np.nan ; df_b1_he_start['time_meas']  = df_b1_he_start['time_meas'].astype(object) 
+				df_b1_he_start['blength']    = np.nan ; df_b1_he_start['blength']    = df_b1_he_start['blength'].astype(object)   
 				df_b1_he_start['brightness'] = np.nan ; df_b1_he_start['brightness'] = df_b1_he_start['brightness'].astype(object)
-				df_b1_he_start['intensity']  = np.nan ; df_b1_he_start['intensity']  = df_b1_he_start['intensity'].astype(object)
-				df_b1_he_start['emitv']      = np.nan ; df_b1_he_start['emitv']      = df_b1_he_start['emitv'].astype(object)
-				df_b1_he_start['emith']      = np.nan ; df_b1_he_start['emith']      = df_b1_he_start['emith'].astype(object)
-				df_b1_he_start['filled_slots']      = np.nan ; df_b1_he_start['filled_slots']      = df_b1_he_start['filled_slots'].astype(object)
+				df_b1_he_start['intensity']  = np.nan ; df_b1_he_start['intensity']  = df_b1_he_start['intensity'].astype(object) 
+				df_b1_he_start['emitv']      = np.nan ; df_b1_he_start['emitv']      = df_b1_he_start['emitv'].astype(object)     
+				df_b1_he_start['emith']      = np.nan ; df_b1_he_start['emith']      = df_b1_he_start['emith'].astype(object)  
+				df_b1_he_start['filled_slots']      = np.nan ; df_b1_he_start['filled_slots']      = df_b1_he_start['filled_slots'].astype(object)  
 
 				df_b1_he_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['time_meas'])
-				df_b1_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['blength'])
+				df_b1_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['blength'])   
 				df_b1_he_start.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['brightness'])
-				df_b1_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['intensity'])
-				df_b1_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emitv'])
-				df_b1_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emith'])
-				df_b1_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])
+				df_b1_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['intensity']) 
+				df_b1_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emitv'])     
+				df_b1_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['emith'])				   
+				df_b1_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])				   
 
 
 				# df_b1_he_start['time_meas']    	  		= pd.Series(self.filln_CycleDict['beam_1']['he_before_SB']['at_start']['time_meas'])
@@ -2596,21 +2665,21 @@ class LumiFollowUp(object):
 
 				## beam 1 - FLATTOP end
 				df_b1_he_end = pd.DataFrame()
-				df_b1_he_end['time_meas']  = np.nan ; df_b1_he_end['time_meas']   = df_b1_he_end['time_meas'].astype(object)
-				df_b1_he_end['blength']    = np.nan ; df_b1_he_end['blength']     = df_b1_he_end['blength'].astype(object)
-				df_b1_he_end['brightness'] = np.nan ; df_b1_he_end['brightness']  = df_b1_he_end['brightness'].astype(object)
-				df_b1_he_end['intensity']  = np.nan ; df_b1_he_end['intensity']   = df_b1_he_end['intensity'].astype(object)
-				df_b1_he_end['emitv']      = np.nan ; df_b1_he_end['emitv']       = df_b1_he_end['emitv'].astype(object)
-				df_b1_he_end['emith']      = np.nan ; df_b1_he_end['emith']       = df_b1_he_end['emith'].astype(object)
-				df_b1_he_end['filled_slots']      = np.nan ; df_b1_he_end['filled_slots']       = df_b1_he_end['filled_slots'].astype(object)
+				df_b1_he_end['time_meas']  = np.nan ; df_b1_he_end['time_meas']   = df_b1_he_end['time_meas'].astype(object)       
+				df_b1_he_end['blength']    = np.nan ; df_b1_he_end['blength']     = df_b1_he_end['blength'].astype(object)         
+				df_b1_he_end['brightness'] = np.nan ; df_b1_he_end['brightness']  = df_b1_he_end['brightness'].astype(object)      
+				df_b1_he_end['intensity']  = np.nan ; df_b1_he_end['intensity']   = df_b1_he_end['intensity'].astype(object)       
+				df_b1_he_end['emitv']      = np.nan ; df_b1_he_end['emitv']       = df_b1_he_end['emitv'].astype(object)           
+				df_b1_he_end['emith']      = np.nan ; df_b1_he_end['emith']       = df_b1_he_end['emith'].astype(object)     
+				df_b1_he_end['filled_slots']      = np.nan ; df_b1_he_end['filled_slots']       = df_b1_he_end['filled_slots'].astype(object)     
 
 				df_b1_he_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['time_meas'])
-				df_b1_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['blength'])
+				df_b1_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['blength'])   
 				df_b1_he_end.set_value(0, 'brightness', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['brightness'])
-				df_b1_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['intensity'])
-				df_b1_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv'])
-				df_b1_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith'])
-				df_b1_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])
+				df_b1_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['intensity']) 
+				df_b1_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emitv'])     
+				df_b1_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_1']['he_before_SB']['at_end']['emith'])      
+				df_b1_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_1']['he_before_SB']['filled_slots'])      
 
 
 
@@ -2634,22 +2703,22 @@ class LumiFollowUp(object):
 				## beam 2- FLATTOP start
 				df_b2_he_start = pd.DataFrame()
 
-				df_b2_he_start['time_meas']  = np.nan ;	df_b2_he_start['time_meas']    	 = df_b2_he_start['time_meas'].astype(object)
-				df_b2_he_start['blength']   = np.nan ;	df_b2_he_start['blength']     	 = df_b2_he_start['blength'].astype(object)
-				df_b2_he_start['brightness'] = np.nan ;	df_b2_he_start['brightness']     = df_b2_he_start['brightness'].astype(object)
-				df_b2_he_start['intensity']  = np.nan ;	df_b2_he_start['intensity']      = df_b2_he_start['intensity'].astype(object)
-				df_b2_he_start['emitv']     = np.nan ;	df_b2_he_start['emitv']       	 = df_b2_he_start['emitv'].astype(object)
-				df_b2_he_start['emith']     = np.nan ;	df_b2_he_start['emith']       	 = df_b2_he_start['emith'].astype(object)
-				df_b2_he_start['filled_slots']     = np.nan ;	df_b2_he_start['filled_slots']       	 = df_b2_he_start['filled_slots'].astype(object)
+				df_b2_he_start['time_meas']  = np.nan ;	df_b2_he_start['time_meas']    	 = df_b2_he_start['time_meas'].astype(object)         	
+				df_b2_he_start['blength']   = np.nan ;	df_b2_he_start['blength']     	 = df_b2_he_start['blength'].astype(object)          	
+				df_b2_he_start['brightness'] = np.nan ;	df_b2_he_start['brightness']     = df_b2_he_start['brightness'].astype(object)         
+				df_b2_he_start['intensity']  = np.nan ;	df_b2_he_start['intensity']      = df_b2_he_start['intensity'].astype(object)          
+				df_b2_he_start['emitv']     = np.nan ;	df_b2_he_start['emitv']       	 = df_b2_he_start['emitv'].astype(object)            	
+				df_b2_he_start['emith']     = np.nan ;	df_b2_he_start['emith']       	 = df_b2_he_start['emith'].astype(object)       
+				df_b2_he_start['filled_slots']     = np.nan ;	df_b2_he_start['filled_slots']       	 = df_b2_he_start['filled_slots'].astype(object)       
 
 
 				df_b2_he_start.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['time_meas'])
-				df_b2_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])
+				df_b2_he_start.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])   
 				df_b2_he_start.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['brightness'])
-				df_b2_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['intensity'])
-				df_b2_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emitv'])
-				df_b2_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emith'])
-				df_b2_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])
+				df_b2_he_start.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['intensity']) 
+				df_b2_he_start.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emitv'])     
+				df_b2_he_start.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['emith'])       	
+				df_b2_he_start.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])       	
 
 				# df_b2_he_start['time_meas']    	  		= pd.Series(self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['time_meas'])
 				# df_b2_he_start['blength']     		  	= pd.Series(self.filln_CycleDict['beam_2']['he_before_SB']['at_start']['blength'])
@@ -2671,21 +2740,21 @@ class LumiFollowUp(object):
 
 				## beam 2 - FLATTOP end
 				df_b2_he_end = pd.DataFrame()
-				df_b2_he_end['time_meas'] = np.nan; df_b2_he_end['time_meas']  = df_b2_he_end['time_meas'].astype(object)
-				df_b2_he_end['blength']   = np.nan; df_b2_he_end['blength']    = df_b2_he_end['blength'].astype(object)
-				df_b2_he_end['brightness']= np.nan; df_b2_he_end['brightness'] = df_b2_he_end['brightness'].astype(object)
-				df_b2_he_end['intensity'] = np.nan; df_b2_he_end['intensity']  = df_b2_he_end['intensity'].astype(object)
-				df_b2_he_end['emitv']     = np.nan; df_b2_he_end['emitv']      = df_b2_he_end['emitv'].astype(object)
-				df_b2_he_end['emith']     = np.nan; df_b2_he_end['emith']      = df_b2_he_end['emith'].astype(object)
-				df_b2_he_end['filled_slots']     = np.nan; df_b2_he_end['filled_slots']      = df_b2_he_end['filled_slots'].astype(object)
+				df_b2_he_end['time_meas'] = np.nan; df_b2_he_end['time_meas']  = df_b2_he_end['time_meas'].astype(object)        
+				df_b2_he_end['blength']   = np.nan; df_b2_he_end['blength']    = df_b2_he_end['blength'].astype(object)          
+				df_b2_he_end['brightness']= np.nan; df_b2_he_end['brightness'] = df_b2_he_end['brightness'].astype(object)       
+				df_b2_he_end['intensity'] = np.nan; df_b2_he_end['intensity']  = df_b2_he_end['intensity'].astype(object)        
+				df_b2_he_end['emitv']     = np.nan; df_b2_he_end['emitv']      = df_b2_he_end['emitv'].astype(object)            
+				df_b2_he_end['emith']     = np.nan; df_b2_he_end['emith']      = df_b2_he_end['emith'].astype(object)   
+				df_b2_he_end['filled_slots']     = np.nan; df_b2_he_end['filled_slots']      = df_b2_he_end['filled_slots'].astype(object)   
 
 				df_b2_he_end.set_value(0, 'time_meas', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['time_meas'])
-				df_b2_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['blength'])
+				df_b2_he_end.set_value(0, 'blength', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['blength'])   
 				df_b2_he_end.set_value(0, 'brightness', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['brightness'])
-				df_b2_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['intensity'])
-				df_b2_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emitv'])
-				df_b2_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emith'])
-				df_b2_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])
+				df_b2_he_end.set_value(0, 'intensity', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['intensity']) 
+				df_b2_he_end.set_value(0, 'emitv', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emitv'])     
+				df_b2_he_end.set_value(0, 'emith', self.filln_CycleDict['beam_2']['he_before_SB']['at_end']['emith'])          
+				df_b2_he_end.set_value(0, 'filled_slots', self.filln_CycleDict['beam_2']['he_before_SB']['filled_slots'])          
 
 
 
@@ -3061,256 +3130,258 @@ class LumiFollowUp(object):
 				   self.filln_CycleDict = pickle.load(fid)
 
 
-			gamma = {'Injection': self.gammaFB, 'he_before_SB': self.gammaFT}
-			VRF = {'Injection': self.VRF_FB, 'he_before_SB': self.VRF_FT}
-			tauSRxy_s = {'Injection': self.tauSRxy_FB, 'he_before_SB': self.tauSRxy_FT}
+		gamma = {'Injection': self.gammaFB, 'he_before_SB': self.gammaFT}
+		VRF = {'Injection': self.VRF_FB, 'he_before_SB': self.VRF_FT}
+		tauSRxy_s = {'Injection': self.tauSRxy_FB, 'he_before_SB': self.tauSRxy_FT}
 
-			info("#runCycleModel : Running Cycle model for Fill {}".format(filln))
-			dict_model = {}
-			for beam_n in [1, 2]:
-				dict_model['beam_{}'.format(beam_n)] = {}
-				for interval in ['Injection', 'he_before_SB']:
-					dict_model['beam_{}'.format(beam_n)][interval] = {}
-					dict_model['beam_{}'.format(beam_n)][interval]['at_start']={}
-					for param in ['time_meas', 'emith', 'blength', 'emitv']:
-						dict_model['beam_{}'.format(beam_n)][interval]['at_start'][param] = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start'][param]
+		info("#runCycleModel : Running Cycle model for Fill {}".format(filln))
+		dict_model = {}
+		for beam_n in [1, 2]:
+			dict_model['beam_{}'.format(beam_n)] = {}
+			for interval in ['Injection', 'he_before_SB']:
+				dict_model['beam_{}'.format(beam_n)][interval] = {}
+				dict_model['beam_{}'.format(beam_n)][interval]['filled_slots'] = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['filled_slots']
+				dict_model['beam_{}'.format(beam_n)][interval]['at_start']={}
+				for param in ['time_meas', 'emith', 'blength', 'emitv']:
+					dict_model['beam_{}'.format(beam_n)][interval]['at_start'][param] = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start'][param]
 
-					emit_h_IBS_end, IBSx, bl_IBS_end, IBSl, ey_IBS = IBSmodel(IBSON=1, gamma=gamma[interval],
-						bunch_intensity_p = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['intensity']),
-						ex_norm_m         = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['emith'])*1.0e-06,
-						ey_norm_m         = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['emitv'])*1.0e-06,
-						bl_4sigma_s       = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['blength']),
-						VRF_V             = VRF[interval],
-						dt_s              = (np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas'])-np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['time_meas'])))
+				emit_h_IBS_end, IBSx, bl_IBS_end, IBSl, ey_IBS = IBSmodel(IBSON=1, gamma=gamma[interval],
+					bunch_intensity_p = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['intensity']),
+					ex_norm_m         = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['emith'])*1.0e-06,
+					ey_norm_m         = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['emitv'])*1.0e-06,
+					bl_4sigma_s       = np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['blength']),
+					VRF_V             = VRF[interval],
+					dt_s              = (np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas'])-np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['time_meas'])))
 
-					dict_model['beam_{}'.format(beam_n)][interval]['at_end']               = {}
-					dict_model['beam_{}'.format(beam_n)][interval]['at_end']['emith']      = emit_h_IBS_end*1.0e06
-					dict_model['beam_{}'.format(beam_n)][interval]['at_end']['emitv']      = ey_IBS*1.0e06
-					dict_model['beam_{}'.format(beam_n)][interval]['at_end']['blength']    = bl_IBS_end
-					dict_model['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']  = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']
+				dict_model['beam_{}'.format(beam_n)][interval]['at_end']               = {}
+				dict_model['beam_{}'.format(beam_n)][interval]['at_end']['emith']      = emit_h_IBS_end*1.0e06
+				dict_model['beam_{}'.format(beam_n)][interval]['at_end']['emitv']      = ey_IBS*1.0e06
+				dict_model['beam_{}'.format(beam_n)][interval]['at_end']['blength']    = bl_IBS_end
+				dict_model['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']  = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']
 
 
-			self.filln_CycleModelDict = dict_model
-			dict_inj2sb = {}
-			### Now that I have the dict_mdoel and the self.filln_CycleDict I can run Inj2SB
+		self.filln_CycleModelDict = dict_model
+		dict_inj2sb = {}
+		### Now that I have the dict_mdoel and the self.filln_CycleDict I can run Inj2SB
 
-			for beam_n in [1, 2]:
-				dict_inj2sb['beam_{}'.format(beam_n)] = {}
-				for interval in ['he_before_SB']:
-					dict_inj2sb['beam_{}'.format(beam_n)][interval] = {}
-					dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_start'] = {}
-					for param in ['time_meas', 'emith', 'blength', 'emitv']:
-						dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_start'][param] = dict_model['beam_{}'.format(beam_n)]['Injection']['at_end'][param]
+		for beam_n in [1, 2]:
+			dict_inj2sb['beam_{}'.format(beam_n)] = {}
+			for interval in ['he_before_SB']:
+				dict_inj2sb['beam_{}'.format(beam_n)][interval] = {}
+				dict_inj2sb['beam_{}'.format(beam_n)][interval]['filled_slots'] = dict_model['beam_{}'.format(beam_n)][interval]['filled_slots']
+				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_start'] = {}
+				for param in ['time_meas', 'emith', 'blength', 'emitv']:
+					dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_start'][param] = dict_model['beam_{}'.format(beam_n)]['Injection']['at_end'][param]
 
-					emit_h_IBS_end, IBSx, bl_IBS_end, IBSl, ey_IBS = IBSmodel(IBSON=1, gamma=gamma[interval],
-						bunch_intensity_p=np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['intensity']),
-						ex_norm_m=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['emith'])*1.0e-06,
-						ey_norm_m=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['emitv'])*1.0e-06,
-						bl_4sigma_s=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['blength']),
-						VRF_V = VRF[interval],
-						dt_s = (np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas'])-np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['time_meas'])))
+				emit_h_IBS_end, IBSx, bl_IBS_end, IBSl, ey_IBS = IBSmodel(IBSON=1, gamma=gamma[interval],
+					bunch_intensity_p=np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['intensity']),
+					ex_norm_m=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['emith'])*1.0e-06,
+					ey_norm_m=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['emitv'])*1.0e-06,
+					bl_4sigma_s=np.array(dict_model['beam_{}'.format(beam_n)]['Injection']['at_end']['blength']),
+					VRF_V = VRF[interval],
+					dt_s = (np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas'])-np.array(self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_start']['time_meas'])))
 
-				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']               = {}
-				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['emith']      = emit_h_IBS_end*1.0e06
-				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['emitv']      = ey_IBS*1.0e06
-				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['blength']    = bl_IBS_end
-				dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']  = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']
+			dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']               = {}
+			dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['emith']      = emit_h_IBS_end*1.0e06
+			dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['emitv']      = ey_IBS*1.0e06
+			dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['blength']    = bl_IBS_end
+			dict_inj2sb['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']  = self.filln_CycleDict['beam_{}'.format(beam_n)][interval]['at_end']['time_meas']
 
-			self.filln_CycleModelInj2SBDict = dict_inj2sb
+		self.filln_CycleModelInj2SBDict = dict_inj2sb
 
-			if self.saveDict:
-				filename = self.fill_dir+self.Cycle_model_filename
-				filename = filename.replace('<FILLNUMBER>',str(filln))
-				if self.doRescale:
-					if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
-						filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
-					else:
-						filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+		if self.saveDict:
+			filename = self.fill_dir+self.Cycle_model_filename
+			filename = filename.replace('<FILLNUMBER>',str(filln))
+			if self.doRescale:
+				if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
+					filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
 				else:
-					filename = filename.replace('<RESC>', '')
-				info('# runCycleModel : Saving dictionary for Cycle Model of fill {} into {}'.format(filln, filename ))
-				if os.path.exists(filename):
-					if self.overwriteFiles:
-						warn("# runCycleModel : Dictionary Cycle Model pickle for fill {} already exists! Overwritting it...".format(filln))
-						with gzip.open(filename, 'wb') as fid:
-							pickle.dump(dict_model, fid)
-					else:
-						warn("# runCycleModel : Dictionary Cycle Model pickle for fill {} already exists! Skipping it...".format(filln))
-				else:
+					filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+			else:
+				filename = filename.replace('<RESC>', '')
+			info('# runCycleModel : Saving dictionary for Cycle Model of fill {} into {}'.format(filln, filename ))
+			if os.path.exists(filename):
+				if self.overwriteFiles:
+					warn("# runCycleModel : Dictionary Cycle Model pickle for fill {} already exists! Overwritting it...".format(filln))
 					with gzip.open(filename, 'wb') as fid:
 						pickle.dump(dict_model, fid)
+				else:
+					warn("# runCycleModel : Dictionary Cycle Model pickle for fill {} already exists! Skipping it...".format(filln))
+			else:
+				with gzip.open(filename, 'wb') as fid:
+					pickle.dump(dict_model, fid)
 
 
-				filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_Inj2SB.pkl.gz')
-				filename = filename.replace('<FILLNUMBER>',str(filln))
-				if self.doRescale:
-					if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
-						filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
-					else:
-						filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+			filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_Inj2SB.pkl.gz')
+			filename = filename.replace('<FILLNUMBER>',str(filln))
+			if self.doRescale:
+				if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
+					filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
 				else:
-					filename = filename.replace('<RESC>', '')
-				info('# runCycleModel : Saving dictionary for Cycle Model Inj2SB of fill {} into {}'.format(filln, filename ))
-				if os.path.exists(filename):
-					if self.overwriteFiles:
-						warn("# runCycleModel : Dictionary Cycle Model Inj2SB pickle for fill {} already exists! Overwritting it...".format(filln))
-						with gzip.open(filename, 'wb') as fid:
-							pickle.dump(dict_inj2sb, fid)
-					else:
-						warn("# runCycleModel : Dictionary Cycle Model Inj2SB pickle for fill {} already exists! Skipping it...".format(filln))
-				else:
+					filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+			else:
+				filename = filename.replace('<RESC>', '')
+			info('# runCycleModel : Saving dictionary for Cycle Model Inj2SB of fill {} into {}'.format(filln, filename ))
+			if os.path.exists(filename):
+				if self.overwriteFiles:
+					warn("# runCycleModel : Dictionary Cycle Model Inj2SB pickle for fill {} already exists! Overwritting it...".format(filln))
 					with gzip.open(filename, 'wb') as fid:
 						pickle.dump(dict_inj2sb, fid)
-
-
-			if self.savePandas:
-				df_b1_inj_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['Injection']['at_start'], orient='columns')
-				df_b1_inj_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_inj_start['time_meas']))
-				df_b1_inj_start.insert(0, 'model'          , ['model']*len(df_b1_inj_start))
-				df_b1_inj_start.insert(0, 'cycleTime'      , ['injection_start']*len(df_b1_inj_start))
-				df_b1_inj_start.insert(0, 'cycle'          , ['injection']*len(df_b1_inj_start))
-				df_b1_inj_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_inj_start))
-				df_b1_inj_start.insert(0, 'fill'           , [filln]*len(df_b1_inj_start))
-
-				df_b1_inj_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['Injection']['at_end'], orient='columns')
-				df_b1_inj_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_inj_start['time_meas']))
-				df_b1_inj_end.insert(0, 'model'          , ['model']*len(df_b1_inj_end))
-				df_b1_inj_end.insert(0, 'cycleTime'      , ['injection_end']*len(df_b1_inj_end))
-				df_b1_inj_end.insert(0, 'cycle'          , ['injection']*len(df_b1_inj_end))
-				df_b1_inj_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_inj_end))
-				df_b1_inj_end.insert(0, 'fill'           , [filln]*len(df_b1_inj_end))
-
-				df_b2_inj_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['Injection']['at_start'], orient='columns')
-				df_b2_inj_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_inj_start['time_meas']))
-				df_b2_inj_start.insert(0, 'model'          , ['model']*len(df_b2_inj_start))
-				df_b2_inj_start.insert(0, 'cycleTime'      , ['injection_start']*len(df_b2_inj_start))
-				df_b2_inj_start.insert(0, 'cycle'          , ['injection']*len(df_b2_inj_start))
-				df_b2_inj_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_inj_start))
-				df_b2_inj_start.insert(0, 'fill'           , [filln]*len(df_b2_inj_start))
-
-
-				df_b2_inj_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['Injection']['at_end'], orient='columns')
-				df_b2_inj_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_inj_end['time_meas']))
-				df_b2_inj_end.insert(0, 'model'          , ['model']*len(df_b2_inj_end))
-				df_b2_inj_end.insert(0, 'cycleTime'      , ['injection_end']*len(df_b2_inj_end))
-				df_b2_inj_end.insert(0, 'cycle'          , ['injection']*len(df_b2_inj_end))
-				df_b2_inj_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_inj_end))
-				df_b2_inj_end.insert(0, 'fill'           , [filln]*len(df_b2_inj_end))
-				# -----
-				df_b1_he_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['he_before_SB']['at_start'], orient='columns')
-				df_b1_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
-				df_b1_he_start.insert(0, 'model'          , ['model']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'fill'           , [filln]*len(df_b1_he_start))
-
-				df_b1_he_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['he_before_SB']['at_end'], orient='columns')
-				df_b1_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
-				df_b1_he_end.insert(0, 'model'          , ['model']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'fill'           , [filln]*len(df_b1_he_end))
-
-				df_b2_he_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['he_before_SB']['at_start'], orient='columns')
-				df_b2_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_start['time_meas']))
-				df_b2_he_start.insert(0, 'model'          , ['model']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'fill'           , [filln]*len(df_b2_he_start))
-
-
-				df_b2_he_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['he_before_SB']['at_end'], orient='columns')
-				df_b2_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_end['time_meas']))
-				df_b2_he_end.insert(0, 'model'          , ['model']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'fill'           , [filln]*len(df_b2_he_end))
-
-				cycle_model_total = df_b1_inj_start.append(df_b1_inj_end).append(df_b2_inj_start).append(df_b2_inj_end).append(df_b1_he_start).append(df_b1_he_end).append(df_b2_he_start).append(df_b2_he_end)
-				cycle_model_total = cycle_model_total.set_index(['fill','beam','cycle'], drop=False)
-
-				filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_df.pkl.gz')
-				filename = filename.replace('<FILLNUMBER>',str(filln))
-				if self.doRescale:
-					if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
-						filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
-					else:
-						filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
 				else:
-					filename = filename.replace('<RESC>', '')
-				info('# runCycleModel : Saving Pandas for Cycle Model of fill {} into {}'.format(filln, filename ))
-				if os.path.exists(filename):
-					if self.overwriteFiles:
-						warn("# runCycleModel : Pandas Cycle Model pickle for fill {} already exists! Overwritting it...".format(filln))
-						with gzip.open(filename, 'wb') as fid:
-							pickle.dump(cycle_model_total, fid)
-					else:
-						warn("# runCycleModel : Pandas Cycle Model pickle for fill {} already exists! Skipping it...".format(filln))
+					warn("# runCycleModel : Dictionary Cycle Model Inj2SB pickle for fill {} already exists! Skipping it...".format(filln))
+			else:
+				with gzip.open(filename, 'wb') as fid:
+					pickle.dump(dict_inj2sb, fid)
+
+
+		if self.savePandas:
+			df_b1_inj_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['Injection']['at_start'], orient='columns')
+			df_b1_inj_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_inj_start['time_meas']))
+			df_b1_inj_start.insert(0, 'model'          , ['model']*len(df_b1_inj_start))
+			df_b1_inj_start.insert(0, 'cycleTime'      , ['injection_start']*len(df_b1_inj_start))
+			df_b1_inj_start.insert(0, 'cycle'          , ['injection']*len(df_b1_inj_start))
+			df_b1_inj_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_inj_start))
+			df_b1_inj_start.insert(0, 'fill'           , [filln]*len(df_b1_inj_start))
+
+			df_b1_inj_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['Injection']['at_end'], orient='columns')
+			df_b1_inj_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_inj_start['time_meas']))
+			df_b1_inj_end.insert(0, 'model'          , ['model']*len(df_b1_inj_end))
+			df_b1_inj_end.insert(0, 'cycleTime'      , ['injection_end']*len(df_b1_inj_end))
+			df_b1_inj_end.insert(0, 'cycle'          , ['injection']*len(df_b1_inj_end))
+			df_b1_inj_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_inj_end))
+			df_b1_inj_end.insert(0, 'fill'           , [filln]*len(df_b1_inj_end))
+
+			df_b2_inj_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['Injection']['at_start'], orient='columns')
+			df_b2_inj_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_inj_start['time_meas']))
+			df_b2_inj_start.insert(0, 'model'          , ['model']*len(df_b2_inj_start))
+			df_b2_inj_start.insert(0, 'cycleTime'      , ['injection_start']*len(df_b2_inj_start))
+			df_b2_inj_start.insert(0, 'cycle'          , ['injection']*len(df_b2_inj_start))
+			df_b2_inj_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_inj_start))
+			df_b2_inj_start.insert(0, 'fill'           , [filln]*len(df_b2_inj_start))
+
+
+			df_b2_inj_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['Injection']['at_end'], orient='columns')
+			df_b2_inj_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_inj_end['time_meas']))
+			df_b2_inj_end.insert(0, 'model'          , ['model']*len(df_b2_inj_end))
+			df_b2_inj_end.insert(0, 'cycleTime'      , ['injection_end']*len(df_b2_inj_end))
+			df_b2_inj_end.insert(0, 'cycle'          , ['injection']*len(df_b2_inj_end))
+			df_b2_inj_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_inj_end))
+			df_b2_inj_end.insert(0, 'fill'           , [filln]*len(df_b2_inj_end))
+			# -----
+			df_b1_he_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['he_before_SB']['at_start'], orient='columns')
+			df_b1_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
+			df_b1_he_start.insert(0, 'model'          , ['model']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'fill'           , [filln]*len(df_b1_he_start))
+
+			df_b1_he_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_1']['he_before_SB']['at_end'], orient='columns')
+			df_b1_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
+			df_b1_he_end.insert(0, 'model'          , ['model']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'fill'           , [filln]*len(df_b1_he_end))
+
+			df_b2_he_start = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['he_before_SB']['at_start'], orient='columns')
+			df_b2_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_start['time_meas']))
+			df_b2_he_start.insert(0, 'model'          , ['model']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'fill'           , [filln]*len(df_b2_he_start))
+
+
+			df_b2_he_end = pd.DataFrame.from_dict(self.filln_CycleModelDict['beam_2']['he_before_SB']['at_end'], orient='columns')
+			df_b2_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_end['time_meas']))
+			df_b2_he_end.insert(0, 'model'          , ['model']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'fill'           , [filln]*len(df_b2_he_end))
+
+			cycle_model_total = df_b1_inj_start.append(df_b1_inj_end).append(df_b2_inj_start).append(df_b2_inj_end).append(df_b1_he_start).append(df_b1_he_end).append(df_b2_he_start).append(df_b2_he_end)
+			cycle_model_total = cycle_model_total.set_index(['fill','beam','cycle'], drop=False)
+
+			filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_df.pkl.gz')
+			filename = filename.replace('<FILLNUMBER>',str(filln))
+			if self.doRescale:
+				if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
+					filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
 				else:
+					filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+			else:
+				filename = filename.replace('<RESC>', '')
+			info('# runCycleModel : Saving Pandas for Cycle Model of fill {} into {}'.format(filln, filename ))
+			if os.path.exists(filename):
+				if self.overwriteFiles:
+					warn("# runCycleModel : Pandas Cycle Model pickle for fill {} already exists! Overwritting it...".format(filln))
 					with gzip.open(filename, 'wb') as fid:
 						pickle.dump(cycle_model_total, fid)
-
-				# doing the same for Inj2SB
-				df_b1_he_start = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_1']['he_before_SB']['at_start'], orient='columns')
-				df_b1_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
-				df_b1_he_start.insert(0, 'model'          , ['model']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_start))
-				df_b1_he_start.insert(0, 'fill'           , [filln]*len(df_b1_he_start))
-
-				df_b1_he_end = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_1']['he_before_SB']['at_end'], orient='columns')
-				df_b1_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
-				df_b1_he_end.insert(0, 'model'          , ['model']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_end))
-				df_b1_he_end.insert(0, 'fill'           , [filln]*len(df_b1_he_end))
-
-				df_b2_he_start = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_2']['he_before_SB']['at_start'], orient='columns')
-				df_b2_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_start['time_meas']))
-				df_b2_he_start.insert(0, 'model'          , ['model']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_start))
-				df_b2_he_start.insert(0, 'fill'           , [filln]*len(df_b2_he_start))
-
-
-				df_b2_he_end = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_2']['he_before_SB']['at_end'], orient='columns')
-				df_b2_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_end['time_meas']))
-				df_b2_he_end.insert(0, 'model'          , ['model']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_end))
-				df_b2_he_end.insert(0, 'fill'           , [filln]*len(df_b2_he_end))
-
-				cycle_model_inj2sb_total_df = df_b1_he_start.append(df_b1_he_end).append(df_b2_he_start).append(df_b2_he_end)
-				cycle_model_inj2sb_total_df = cycle_model_inj2sb_total_df.set_index(['fill','beam','cycle'], drop=False)
-
-				filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_Inj2SB_df.pkl.gz')
-				filename = filename.replace('<FILLNUMBER>',str(filln))
-				if self.doRescale:
-					if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
-						filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
-					else:
-						filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
 				else:
-					filename = filename.replace('<RESC>', '')
-				info('# runCycleModel : Saving Pandas for Cycle Model Inj2SB of fill {} into {}'.format(filln, filename ))
-				if os.path.exists(filename):
-					if self.overwriteFiles:
-						warn("# runCycleModel : Pandas Cycle Model Inj2SB pickle for fill {} already exists! Overwritting it...".format(filln))
-						with gzip.open(filename, 'wb') as fid:
-							pickle.dump(cycle_model_inj2sb_total_df, fid)
-					else:
-						warn("# runCycleModel : Pandas Cycle Model Inj2SB pickle for fill {} already exists! Skipping it...".format(filln))
+					warn("# runCycleModel : Pandas Cycle Model pickle for fill {} already exists! Skipping it...".format(filln))
+			else:
+				with gzip.open(filename, 'wb') as fid:
+					pickle.dump(cycle_model_total, fid)
+
+			# doing the same for Inj2SB
+			df_b1_he_start = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_1']['he_before_SB']['at_start'], orient='columns')
+			df_b1_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
+			df_b1_he_start.insert(0, 'model'          , ['model']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_start))
+			df_b1_he_start.insert(0, 'fill'           , [filln]*len(df_b1_he_start))
+
+			df_b1_he_end = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_1']['he_before_SB']['at_end'], orient='columns')
+			df_b1_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b1_he_start['time_meas']))
+			df_b1_he_end.insert(0, 'model'          , ['model']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'beam'           , ['beam_1']*len(df_b1_he_end))
+			df_b1_he_end.insert(0, 'fill'           , [filln]*len(df_b1_he_end))
+
+			df_b2_he_start = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_2']['he_before_SB']['at_start'], orient='columns')
+			df_b2_he_start.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_start['time_meas']))
+			df_b2_he_start.insert(0, 'model'          , ['model']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'cycleTime'      , ['flattop_start']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_start))
+			df_b2_he_start.insert(0, 'fill'           , [filln]*len(df_b2_he_start))
+
+
+			df_b2_he_end = pd.DataFrame.from_dict(self.filln_CycleModelInj2SBDict['beam_2']['he_before_SB']['at_end'], orient='columns')
+			df_b2_he_end.insert(0, 'datetime'       , self.convertToLocalTime(df_b2_he_end['time_meas']))
+			df_b2_he_end.insert(0, 'model'          , ['model']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'cycleTime'      , ['flattop_end']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'cycle'          , ['flattop']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'beam'           , ['beam_2']*len(df_b2_he_end))
+			df_b2_he_end.insert(0, 'fill'           , [filln]*len(df_b2_he_end))
+
+			cycle_model_inj2sb_total_df = df_b1_he_start.append(df_b1_he_end).append(df_b2_he_start).append(df_b2_he_end)
+			cycle_model_inj2sb_total_df = cycle_model_inj2sb_total_df.set_index(['fill','beam','cycle'], drop=False)
+
+			filename = self.fill_dir+self.Cycle_model_filename.replace('.pkl.gz', '_Inj2SB_df.pkl.gz')
+			filename = filename.replace('<FILLNUMBER>',str(filln))
+			if self.doRescale:
+				if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
+					filename = filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
 				else:
+					filename = filename.replace('<RESC>', '' ).replace("<TO>", '')
+			else:
+				filename = filename.replace('<RESC>', '')
+			info('# runCycleModel : Saving Pandas for Cycle Model Inj2SB of fill {} into {}'.format(filln, filename ))
+			if os.path.exists(filename):
+				if self.overwriteFiles:
+					warn("# runCycleModel : Pandas Cycle Model Inj2SB pickle for fill {} already exists! Overwritting it...".format(filln))
 					with gzip.open(filename, 'wb') as fid:
 						pickle.dump(cycle_model_inj2sb_total_df, fid)
+				else:
+					warn("# runCycleModel : Pandas Cycle Model Inj2SB pickle for fill {} already exists! Skipping it...".format(filln))
+			else:
+				with gzip.open(filename, 'wb') as fid:
+					pickle.dump(cycle_model_inj2sb_total_df, fid)
 	## - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 	def runSBFits(self, filln):
 		'''
@@ -3627,9 +3698,10 @@ class LumiFollowUp(object):
 
 		phi_full_rad_ATLAS = None
 		phi_full_rad_CMS   = None
+		fatal("# Run SB Model : Varying Crossing angle must be set in SBMODEL")
 		# get xing angle info
 		for key in self.XingAngle.keys():
-			print key, filln
+			print key, filln 
 			if filln in range(key[0], key[1]): # >= key[0] and filln<=key[1]:
 				print filln, key, self.XingAngle[key]
 				phi_full_rad_ATLAS  = self.XingAngle[key][0]
@@ -3637,7 +3709,7 @@ class LumiFollowUp(object):
 				info('# runSBModel: Setting crossing angle IP1 = {} , IP5 = {}!'.format(phi_full_rad_ATLAS, phi_full_rad_CMS))
 				break
 			# else:
-			#
+			# 	
 			# 	return
 		if phi_full_rad_ATLAS is None or phi_full_rad_CMS is None:
 			warn('# runSBModel: Crossing angle information for IP1/IP5 not found!')
@@ -3826,6 +3898,7 @@ class LumiFollowUp(object):
 			bl_interp_m_noncoll          = self.filln_StableBeamsDict['bl_interp_m_noncoll']
 			slots_filled_noncoll         = self.filln_StableBeamsDict['slots_filled_noncoll']
 			time_range                   = self.filln_StableBeamsDict['time_range']
+			xing_angle 					 = self.filln_StableBeamsDict['xing_angle']
 		else:
 			##populate it from file
 			filename = self.fill_dir+self.SB_filename
@@ -3856,6 +3929,7 @@ class LumiFollowUp(object):
 			bl_interp_m_noncoll          = dict_SB['bl_interp_m_noncoll']
 			slots_filled_noncoll         = dict_SB['slots_filled_noncoll']
 			time_range                   = dict_SB['time_range']
+			xing_angle 					 = dict_SB['xing_angle']
 		## Calculate beam sizes squared for B1, B2 and H, V
 		sigma_h_b1 = np.sqrt(1e-6*eh_interp_coll[1]/self.gammaFT*self.betastar_m)
 		sigma_v_b1 = np.sqrt(1e-6*ev_interp_coll[1]/self.gammaFT*self.betastar_m)
@@ -3868,8 +3942,8 @@ class LumiFollowUp(object):
 		bl_conv = (bl_interp_m_coll[1]+bl_interp_m_coll[2])/2.
 
 		## Calculate the reduction factor of the crossing plane and crossing angle
-		FF_ATLAS = 1./np.sqrt(1.+((bl_conv/sigma_v_conv)*(self.bmodes['CrossingAngle_ATLAS'][filln]/2.))**2.)
-		FF_CMS = 1./np.sqrt(1.+((bl_conv/sigma_h_conv)*(self.bmodes['CrossingAngle_CMS'][filln]/2.))**2.)
+		FF_ATLAS = 1./np.sqrt(1.+((bl_conv/sigma_v_conv)*(xing_angle[1][np.newaxis].T/2.))**2.)
+		FF_CMS   = 1./np.sqrt(1.+((bl_conv/sigma_h_conv)*(xing_angle[5][np.newaxis].T/2.))**2.)
 
 		## Net bunch by bunch luminosity
 		lumi_bbb_net = self.frev*b_inten_interp_coll[1]*b_inten_interp_coll[2]/4./np.pi/(sigma_h_conv*sigma_v_conv)
@@ -3885,6 +3959,7 @@ class LumiFollowUp(object):
 		dict_save['ATLAS']['bunch_lumi'] = lumi_bbb_ATLAS_invm2
 		dict_save['CMS']['bunch_lumi']   = lumi_bbb_CMS_invm2
 		dict_save['time_range']          = time_range
+		dict_save['xing_angle'] 		 = xing_angle
 
 		## Copy these data to external dict
 		debug("# runCalculatedLuminosity : Filling Lumi calc dictionary.")
@@ -3998,7 +4073,7 @@ class LumiFollowUp(object):
 		'''
 		Get measured luminosity from Timber
 		'''
-
+		
 		self.filln_LumiMeasDict.clear()
 		## Get some stuff from SB dictionary
 		if len(self.filln_StableBeamsDict.keys()) > 0:
@@ -4021,16 +4096,16 @@ class LumiFollowUp(object):
 				   self.filln_StableBeamsDict = pickle.load(fid)
 			slots_filled_coll            = self.filln_StableBeamsDict['slots_filled_coll']
 			time_range                   = self.filln_StableBeamsDict['time_range']
-
+		
 		timber_dic = {}
 		timber_dic.update(tm.parse_timber_file(config.BBB_LUMI_DATA_FILE.replace('<FILLNUMBER>',str(filln)), verbose=False))
-
+		
 		self.filln_LumiMeasDict = {"ATLAS" : {'bunch_lumi': []},
 									"CMS"   : {'bunch_lumi': [] } }
 
 		for experiment in ['ATLAS', 'CMS']:
 			lumi = LUMI_bbb.LUMI(timber_dic, experiment=experiment)
-
+			
 			for t in time_range:
 				self.filln_LumiMeasDict[experiment]['bunch_lumi'].append(lumi.nearest_older_sample(t))
 
@@ -4103,7 +4178,7 @@ class LumiFollowUp(object):
 			with tarfile.open(lumifile, 'r:gz') as tarfid:
 				for slot_bun in slots_filled_coll[1]:
 					if debug:
-						if np.mod(slot_bun, 10)==0:
+						if np.mod(slot_bun, 1000)==0:
 							info("Experiment : {} : Bunch Slot: {} ".format(experiment, slot_bun))
 
 					bucket = (slot_bun)*10+1
@@ -4189,7 +4264,7 @@ class LumiFollowUp(object):
 		bl_interp_m_noncoll          = self.filln_StableBeamsDict['bl_interp_m_noncoll']
 		slots_filled_noncoll         = self.filln_StableBeamsDict['slots_filled_noncoll']
 		time_range                   = self.filln_StableBeamsDict['time_range']
-
+		xing 						 = self.filln_StableBeamsDict['xing_angle']
 		## load info from calculated lumi dictionary
 		lumi_bbb_ATLAS_invm2         = self.filln_LumiCalcDict['ATLAS']['bunch_lumi']
 		lumi_bbb_CMS_invm2           = self.filln_LumiCalcDict['CMS']['bunch_lumi']
@@ -4197,6 +4272,22 @@ class LumiFollowUp(object):
 		## start plotting...
 		pl.close('all')
 		ms.mystyle_arial(self.myfontsize)
+
+
+		info("# makePerformancePlotsPerFill : Fill {} -> Making Emittances B1 plot...".format(filln))
+		fig_xing = pl.figure(0, figsize=self.fig_tuple)
+		fig_xing.canvas.set_window_title('Emittances B1')
+		fig_xing.set_facecolor('w')
+		ax = pl.subplot(111)
+		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[1], 'b-', label='IP1', lw=3)
+		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[5], 'r-', label='IP5', lw=3)
+		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+		ax.set_xlabel('Time', fontsize=14, fontweight='bold')
+		ax.set_ylabel('Half Crossing Angle [$\mathbf{\mu}$rad]', fontsize=14, fontweight='bold')
+		ax.grid('on')
+		ax.legend(loc='best', fontsize=12)
+
+
 
 		## Figure : Emittances B1
 		info("# makePerformancePlotsPerFill : Fill {} -> Making Emittances B1 plot...".format(filln))
@@ -4307,7 +4398,7 @@ class LumiFollowUp(object):
 			colorcurr = ms.colorprog(i_prog=i_time, Nplots=N_steps)
 			ax_ne1h.plot(slots_filled_coll[1], eh_interp_coll[1][i_time, :], '.', color=colorcurr)
 			ax_ne1v.plot(slots_filled_coll[1], ev_interp_coll[1][i_time, :], '.', color=colorcurr)
-			ax_ne2h.plot(slots_filled_coll[2], eh_interp_coll[1][i_time, :], '.', color=colorcurr)
+			ax_ne2h.plot(slots_filled_coll[2], eh_interp_coll[2][i_time, :], '.', color=colorcurr)
 			ax_ne2v.plot(slots_filled_coll[2], ev_interp_coll[2][i_time, :], '.', color=colorcurr)
 
 			ax_ne1h_raw.plot(slots_filled_coll[1], eh_interp_raw_coll[1][i_time, :], '.', color=colorcurr)
@@ -4336,10 +4427,18 @@ class LumiFollowUp(object):
 			bx_bl2.plot(slots_filled_coll[2], bl_interp_m_coll[2][i_time, :]*4/clight*1e9, '.', color=colorcurr)
 
 
-		ax_ne1h_t.set_ylim(0, 10)
-		ax_ne1v_t.set_ylim(0, 10)
-		ax_ne2h_t.set_ylim(0, 10)
-		ax_ne2v_t.set_ylim(0, 10)
+		ax_ne1h_t.set_ylim(0, 5)
+		ax_ne1v_t.set_ylim(0, 5)
+		ax_ne2h_t.set_ylim(0, 5)
+		ax_ne2v_t.set_ylim(0, 5)
+
+		bx_bl1_t.set_ylim(0.8, 1.2)
+		bx_bl2_t.set_ylim(0.8, 1.2)
+		
+		# ax_ne1h_t_raw.set_ylim(-5, 10)
+		# ax_ne1v_t_raw.set_ylim(-5, 10)
+		# ax_ne2h_t_raw.set_ylim(-5, 10)
+		# ax_ne2v_t_raw.set_ylim(-5, 10)
 
 
 		for sp in [ax_ne1h, ax_ne1v, ax_ne2h, ax_ne2v,bx_nb1, bx_nb2, bx_bl1, bx_bl2, ax_ne1h_raw, ax_ne1v_raw, ax_ne2h_raw, ax_ne2v_raw]:
@@ -4366,7 +4465,7 @@ class LumiFollowUp(object):
 		bx_nb1_t.set_ylabel('Intensity B1 [p/b]'  , fontsize=14, fontweight='bold')
 		bx_nb2_t.set_ylabel('Intensity B2 [p/b]'  , fontsize=14, fontweight='bold')
 		bx_bl1_t.set_ylabel('Bunch length B1 [ns]', fontsize=14, fontweight='bold')
-		bx_bl2_t.set_ylabel('Bunch length B1 [ns]', fontsize=14, fontweight='bold')
+		bx_bl2_t.set_ylabel('Bunch length B2 [ns]', fontsize=14, fontweight='bold')
 
 		## ------------ Now plot for expected lumi
 		info("# makePerformancePlotsPerFill : Fill {} -> Making Expected BBB Luminosities plot...".format(filln))
@@ -4418,8 +4517,8 @@ class LumiFollowUp(object):
 					sp.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 					sp.set_xlim(0, -(t_start_STABLE-t_end_STABLE)/3600.)
 
-				ax_ATLAS_meas_t.set_ylabel('Meas. Luminosity ATLAS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
-				ax_CMS_meas_t.set_ylabel('Meas. Luminosity CMS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
+				ax_ATLAS_meas_t.set_ylabel('Meas. Luminosity ATLAS [m$\mathbf{^{-2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
+				ax_CMS_meas_t.set_ylabel('Meas. Luminosity CMS [m$\mathbf{^{-2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
 				ax_CMS_meas.set_xlim(0, 3564)
 
 
@@ -4432,8 +4531,8 @@ class LumiFollowUp(object):
 			sp.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 			sp.set_xlim(0, -(t_start_STABLE-t_end_STABLE)/3600.)
 
-		ax_ATLAS_calc_t.set_ylabel('Calc. Luminosity ATLAS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
-		ax_CMS_calc_t.set_ylabel('Calc. Luminosity CMS [m$\mathbf{^{2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
+		ax_ATLAS_calc_t.set_ylabel('Calc. Luminosity ATLAS [m$\mathbf{^{-2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
+		ax_CMS_calc_t.set_ylabel('Calc. Luminosity CMS [m$\mathbf{^{-2}}$ s$\mathbf{^{-1}}$]', fontsize=12, fontweight='bold')
 
 
 		# Lifetime can be ran without running the full lifetime stuff
@@ -4457,34 +4556,42 @@ class LumiFollowUp(object):
 		ax_b1_bbbtau = pl.subplot(211)
 		ax_b2_bbbtau = pl.subplot(212)
 
-		self.plot_mean_and_spread(ax_b1_bbbtau, (time_range[0:-1]-time_range[0])/3600., dict_lifetime[1]['tau_Np_bbb']/3600., label='Beam 1 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[1]['tau_Np_bbb']/3600., axis=1)[0]), color='b', shade=True)
+		self.plot_mean_and_spread(ax_b1_bbbtau, self.convertToLocalTime(time_range[0:-1].astype(int)), dict_lifetime[1]['tau_Np_bbb']/3600., label='Beam 1 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[1]['tau_Np_bbb']/3600., axis=1)[0]), color='b', shade=True)
+		# self.plot_mean_and_spread(ax_b1_bbbtau, (time_range[0:-1]-time_range[0])/3600., dict_lifetime[1]['tau_Np_bbb']/3600., label='Beam 1 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[1]['tau_Np_bbb']/3600., axis=1)[0]), color='b', shade=True)
 		ax_b1_bbbtau.grid('on')
 		ax_b1_bbbtau.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 		ax_b1_bbbtau.set_ylabel("$\mathbf{\\tau_{N_{p}}}$ [h]", fontsize=14, fontweight='bold')
 		ax_b1_bbbtau.legend(loc='best')
 
-		self.plot_mean_and_spread(ax_b2_bbbtau, (time_range[0:-1]-time_range[0])/3600., dict_lifetime[2]['tau_Np_bbb']/3600., label='Beam 2 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[2]['tau_Np_bbb']/3600., axis=1)[0]), color='r', shade=True)
+		self.plot_mean_and_spread(ax_b2_bbbtau, self.convertToLocalTime(time_range[0:-1].astype(int)), dict_lifetime[2]['tau_Np_bbb']/3600., label='Beam 2 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[2]['tau_Np_bbb']/3600., axis=1)[0]), color='r', shade=True)
+		# self.plot_mean_and_spread(ax_b2_bbbtau, (time_range[0:-1]-time_range[0])/3600., dict_lifetime[2]['tau_Np_bbb']/3600., label='Beam 2 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[2]['tau_Np_bbb']/3600., axis=1)[0]), color='r', shade=True)
 		ax_b2_bbbtau.grid('on')
 		ax_b2_bbbtau.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 		ax_b2_bbbtau.set_ylabel("$\mathbf{\\tau_{N_{p}}}$ [h]", fontsize=14, fontweight='bold')
 		ax_b2_bbbtau.legend(loc='best')
 		pl.subplots_adjust(hspace=0.5, wspace=0.5)#, hspace=0.7)
+		
+		for ax in [ax_b1_bbbtau, ax_b2_bbbtau]:
+			ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+			
+		ax_b1_bbbtau.set_ylim(15,50)
+		ax_b2_bbbtau.set_ylim(15,50)
 
-
+		
 		## Figure of Total Luminosity Measured and Calculated for ATLAS/CMS (sum up bbb)
 		if not self.skipMassi:
 			info("# makePerformancePlotsPerFill : Fill {} -> Making Total Luminosity plot...".format(filln))
 			fig_total = pl.figure(8, figsize=self.fig_tuple)
 			fig_total.canvas.set_window_title('Total Luminosity')
 			fig_total.set_facecolor('w')
-			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['ATLAS']['bunch_lumi'], axis=1),       color='b', linewidth=2., label="$\mathcal{L}^{meas}_{ATLAS}$")
+			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['ATLAS']['bunch_lumi'], axis=1), ls='None', marker='o', markersize=8,   color='b', linewidth=2., label="$\mathcal{L}^{meas}_{ATLAS}$")
 			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_ATLAS_invm2,              axis=1), '--', color='b', linewidth=2., label="$\mathcal{L}^{calc}_{ATLAS}$")
-			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['CMS']['bunch_lumi'],   axis=1),       color='r', linewidth=2., label="$\mathcal{L}^{meas}_{CMS}$")
+			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(self.filln_LumiMeasDict['CMS']['bunch_lumi'],   axis=1),    ls='None', marker='x',  markersize=10,   color='r', linewidth=2., label="$\mathcal{L}^{meas}_{CMS}$")
 			pl.plot((time_range-t_start_STABLE)/3600., 1e-4*np.sum(lumi_bbb_CMS_invm2,                axis=1), '--', color='r', linewidth=2., label="$\mathcal{L}^{calc}_{CMS}$")
 			pl.legend(loc='best', prop={"size":12})
 			pl.xlim(-.5, None)
 			pl.ylim(0, None)
-			pl.ylabel('Luminosity [cm$\mathbf{^2}$ s$\mathbf{^{-1}}$]', fontweight='bold', fontsize=14) ## NK: cm??? ATLAS??
+			pl.ylabel('Luminosity [cm$\mathbf{^{-2}}$ s$\mathbf{^{-1}}$]', fontweight='bold', fontsize=14) ## NK: cm??? ATLAS??
 			pl.xlabel('Time [h]', fontsize=14, fontweight='bold')
 			pl.grid('on')
 
@@ -4527,20 +4634,27 @@ class LumiFollowUp(object):
 				ax_b1 = pl.subplot(211)
 				ax_b2 = pl.subplot(212)
 
-				self.plot_mean_and_spread(ax_b1, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, label='Beam 1', color='b', shade=True)
+				# self.plot_mean_and_spread(ax_b1, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, label='Beam 1 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='b', shade=True)
+				self.plot_mean_and_spread(ax_b1, self.convertToLocalTime(time_range[0:-1].astype(int)), self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, label='Beam 1 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='b', shade=True)
 				ax_b1.axhline(80, xmin=0, xmax=1, color='black', label='$\sigma_{\mathrm{inel}}$ = 80mb')
 				ax_b1.grid('on')
 				ax_b1.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 				ax_b1.set_ylabel("$\mathbf{\left(\\frac{dN}{dt}\\right)\slash\mathcal{L}}$ [mb]", fontsize=14, fontweight='bold')
 				ax_b1.legend(loc='best')
 
-				self.plot_mean_and_spread(ax_b2, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, label='Beam 2', color='r', shade=True)
+				self.plot_mean_and_spread(ax_b2, self.convertToLocalTime(time_range[0:-1].astype(int)), self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, label='Beam 2 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='r', shade=True)
+				# self.plot_mean_and_spread(ax_b2, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, label='Beam 2 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='r', shade=True)
 				ax_b2.axhline(80, xmin=0, xmax=1, color='black', label='$\sigma_{\mathrm{inel}}$ = 80mb')
 				ax_b2.grid('on')
 				ax_b2.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 				ax_b2.set_ylabel("$\mathbf{\left(\\frac{dN}{dt}\\right)\slash\mathcal{L}}$ [mb]", fontsize=14, fontweight='bold')
 				ax_b2.legend(loc='best')
 				pl.subplots_adjust(hspace=0.5)#, hspace=0.7)
+				for ax in [ax_b1, ax_b2]:
+					ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+				ax_b1.set_ylim(60, 160)
+				ax_b2.set_ylim(60, 160)
 
 
 			# let's make the tau lumi plot here:
@@ -4550,8 +4664,8 @@ class LumiFollowUp(object):
 				info("# makePerformancePlotsPerFill : Fill {} -> Making Luminosity Lifetime Total plot...".format(filln))
 				fig_tauLumi_tot = pl.figure('tauLumiTotal', figsize=(15,7))
 				tau_tot_AT  = pl.subplot(211)
-				tau_tot_AT.plot(slots_filled_coll[1], self.filln_SBFitsDict['ATLAS']['tau_lumi_calc_coll_full']/3600., c='g', marker='o', markersize=4, ls='None', label='ATLAS - Total Calculated')
-				tau_tot_AT.plot(slots_filled_coll[1], self.filln_SBFitsDict['ATLAS']['tau_lumi_meas_coll_full']/3600., c='k', marker='o', markersize=4, ls='None', label='ATLAS - Total Measured')
+				tau_tot_AT.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['ATLAS']['tau_lumi_calc_coll_full']/3600., c='g', marker='o', markersize=4, ls='None', label='ATLAS - Total Calculated')
+				tau_tot_AT.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['ATLAS']['tau_lumi_meas_coll_full']/3600., c='k', marker='o', markersize=4, ls='None', label='ATLAS - Total Measured')
 				tau_tot_AT.grid('on')
 				tau_tot_AT.set_ylabel('$\mathbf{\\tau_{\mathcal{L}}}$ [h]', fontsize=14, fontweight='bold')
 				tau_tot_AT.set_xlabel('Bunch Slots [25ns]', fontsize=14, fontweight='bold')
@@ -4564,8 +4678,8 @@ class LumiFollowUp(object):
 				tau_tot_CMS = pl.subplot(212)
 				# print '------> Slots : ', slots_filled_coll[1][0], ' , shape : ', np.array(slots_filled_coll[1]).shape
 				# print '------> Tau Total : ', (self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll_full']/3600.)[0], ' , shape : ', np.array(self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll_full']/3600.).shape
-				tau_tot_CMS.plot(slots_filled_coll[1], self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll_full']/3600, c='g', marker='o', markersize=4, ls='None',  label='CMS - Total Calculated')#ls='dotted',
-				tau_tot_CMS.plot(slots_filled_coll[1], self.filln_SBFitsDict['CMS']['tau_lumi_meas_coll_full']/3600, c='k', marker='o', markersize=4, ls='None',  label='CMS - Total Measured')  #ls='dotted',
+				tau_tot_CMS.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll_full']/3600, c='g', marker='o', markersize=4, ls='None',  label='CMS - Total Calculated')#ls='dotted',
+				tau_tot_CMS.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['CMS']['tau_lumi_meas_coll_full']/3600, c='k', marker='o', markersize=4, ls='None',  label='CMS - Total Measured')  #ls='dotted',
 				tau_tot_CMS.grid('on')
 				tau_tot_CMS.set_ylabel('$\mathbf{\\tau_{\mathcal{L}}}$ [h]', fontsize=14, fontweight='bold')
 				tau_tot_CMS.set_xlabel('Bunch Slots [25ns]', fontsize=14, fontweight='bold')
@@ -4579,8 +4693,8 @@ class LumiFollowUp(object):
 				info("# makePerformancePlotsPerFill : Fill {} -> Making Luminosity Lifetime (Fit) plot...".format(filln))
 				fig_tauLumi_fit = pl.figure('tauLumiFit', figsize=(15,7))
 				tau_fit_AT  = pl.subplot(211)
-				tau_fit_AT.plot(slots_filled_coll[1], self.filln_SBFitsDict['ATLAS']['tau_lumi_calc_coll']/3600., c='g', marker='o', markersize=4, ls='None', label='ATLAS - {}h Calculated'.format(int(self.t_fit_length/3600.)))
-				tau_fit_AT.plot(slots_filled_coll[1], self.filln_SBFitsDict['ATLAS']['tau_lumi_meas_coll']/3600., c='k', marker='o', markersize=4, ls='None', label='ATLAS - {}h Measured'.format(int(self.t_fit_length/3600.)))
+				tau_fit_AT.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['ATLAS']['tau_lumi_calc_coll']/3600., c='g', marker='o', markersize=4, ls='None', label='ATLAS - {}h Calculated'.format(int(self.t_fit_length/3600.)))
+				tau_fit_AT.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['ATLAS']['tau_lumi_meas_coll']/3600., c='k', marker='o', markersize=4, ls='None', label='ATLAS - {}h Measured'.format(int(self.t_fit_length/3600.)))
 				tau_fit_AT.grid('on')
 				tau_fit_AT.set_ylabel('$\mathbf{\\tau_{\mathcal{L}}}$ [h]', fontsize=14, fontweight='bold')
 				tau_fit_AT.set_xlabel('Bunch Slots [25ns]', fontsize=14, fontweight='bold')
@@ -4590,8 +4704,8 @@ class LumiFollowUp(object):
 				tau_fit_AT.legend(loc='best', numpoints=1)
 
 				tau_fit_CMS = pl.subplot(212)
-				tau_fit_CMS.plot(slots_filled_coll[1], self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll']/3600., c='g', marker='o', markersize=4, ls='None', label='CMS - {}h Calculated'.format(int(self.t_fit_length/3600.)))
-				tau_fit_CMS.plot(slots_filled_coll[1], self.filln_SBFitsDict['CMS']['tau_lumi_meas_coll']/3600., c='k', marker='o', markersize=4, ls='None', label='CMS - {}h Measured'.format(int(self.t_fit_length/3600.)))
+				tau_fit_CMS.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['CMS']['tau_lumi_calc_coll']/3600., c='g', marker='o', markersize=4, ls='None', label='CMS - {}h Calculated'.format(int(self.t_fit_length/3600.)))
+				tau_fit_CMS.plot(slots_filled_coll[1], -1.0*self.filln_SBFitsDict['CMS']['tau_lumi_meas_coll']/3600., c='k', marker='o', markersize=4, ls='None', label='CMS - {}h Measured'.format(int(self.t_fit_length/3600.)))
 				tau_fit_CMS.grid('on')
 				# tau_fit_CMS.set_ylabel('$\mathbf{\\tau_{\mathcal{L}}}$ [h]', fontsize=14, fontweight='bold')
 				tau_fit_CMS.set_xlabel('Bunch Slots [25ns]', fontsize=14, fontweight='bold')
@@ -4601,9 +4715,12 @@ class LumiFollowUp(object):
 				tau_fit_CMS.legend(loc='best', numpoints=1)
 				pl.subplots_adjust(hspace=0.5, wspace=0.5)
 
+				for sp in [tau_tot_AT, tau_tot_CMS, tau_fit_AT, tau_fit_CMS]:
+					sp.set_ylim(5,30)
+
 		print 'Skip massi ' , self.skipMassi
 		if not self.skipMassi:
-			figlist = [fig_total, fig_int, fig_em1, fig_em2, fig_em1_raw, fig_em2_raw, fig_bl, fig_lumi_calc, fig_lumi_meas, fig_bbb_tau]
+			figlist = [fig_total, fig_int, fig_em1, fig_em2, fig_em1_raw, fig_em2_raw, fig_bl, fig_lumi_calc, fig_lumi_meas, fig_bbb_tau, fig_xing]
 			if doIntLifetime:
 				# figlist.append(fit_totlifetime)
 				figlist.append(fig_bbblifetime)
@@ -4629,7 +4746,8 @@ class LumiFollowUp(object):
 		if self.savePlots:
 			# timeString = datetime.now().strftime("%Y%m%d")
 			saveString = self.plotFormat
-			figDic     = {  fig_em1         :'fill_{}_b1Emittances{}'.format(filln, saveString),
+			figDic     = {  fig_xing        :'fill_{}_crossingAngle{}'.format(filln, saveString), 
+							fig_em1         :'fill_{}_b1Emittances{}'.format(filln, saveString),
 							fig_em2         :'fill_{}_b2Emittances{}'.format(filln, saveString),
 							fig_em1_raw     :'fill_{}_b1RawEmittances{}'.format(filln, saveString),
 							fig_em2_raw     :'fill_{}_b2RawEmittances{}'.format(filln, saveString),
@@ -4829,7 +4947,7 @@ class LumiFollowUp(object):
 			fig_lumi.suptitle('Fill {}: STABLE BEAMS declared on {}\n{}'.format(filln, tref_string, title_string), fontsize=18)
 			pl.subplots_adjust(top=0.85, bottom=0.1, hspace=0.3)
 			if config.savePlots:
-
+				
 				filename = self.plot_dir.replace("<FILLNUMBER>", str(filln))
 				filename = filename + "fill_{}_sbmodel_{}_luminosity_case{}".format(filln, model_name, case)+self.plotFormat
 				fig_lumi.savefig(filename, dpi=self.plotDpi)
