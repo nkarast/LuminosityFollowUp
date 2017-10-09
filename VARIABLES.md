@@ -26,15 +26,15 @@ So far the luminosity follow-up automatic scripts generate pickles with dictiona
 **IMPORTANT:** This is due to change during LS2!
 
 The files created by the script are:
-    - `fill_xxxx.pkl.gz` : Data at STABLE BEAMS
-    - `fill_xxxx_cycle.pkl.gz` : Data from Injection to Flat Top
-    - `fill_xxxx_cycle_model.pkl.gz` : Model data from Injection to Flat Top
-    - `fill_xxxx_cycle_model_Inj2SB.pkl.gz` : Model data from Injection to SB (still under test)
-    - `fill_xxx_fits.pkl.gz` : Parameters of fits performed on SB data
-    - `fill_xxx_lifetime.pkl.gz` : Data on lifetime and Losses
-    - `fill_xxx_lumi_calc.pkl.gz` : Data on calculated Luminosity
-    - `fill_xxx_lumi_meas.pkl.gz` : Data on measured Luminosity
-    - `fill_xxx_sbmodel_caseX.pkl.gz` : Lumi model for case X.
+  - `fill_xxxx.pkl.gz` : Data at STABLE BEAMS
+  - `fill_xxxx_cycle.pkl.gz` : Data from Injection to Flat Top
+  - `fill_xxxx_cycle_model.pkl.gz` : Model data from Injection to Flat Top
+  - `fill_xxxx_cycle_model_Inj2SB.pkl.gz` : Model data from Injection to SB (still under test)
+  - `fill_xxx_fits.pkl.gz` : Parameters of fits performed on SB data
+  - `fill_xxx_lifetime.pkl.gz` : Data on lifetime and Losses
+  - `fill_xxx_lumi_calc.pkl.gz` : Data on calculated Luminosity
+  - `fill_xxx_lumi_meas.pkl.gz` : Data on measured Luminosity
+  - `fill_xxx_sbmodel_caseX.pkl.gz` : Lumi model for case X.
 
 
 
