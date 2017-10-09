@@ -292,7 +292,7 @@ def main():
                                        # plots
                                        savePlots=config.savePlots, fig_tuple=config.fig_tuple, plotFormat=config.plotFormat,
                                        plotDpi=config.plotDpi, myfontsize=config.myfontsize, n_skip=config.n_skip, doCyclePlots=config.doCyclePlots, doCycleModelPlots=config.doCycleModelPlots,
-                                       doSBPlots=config.doSBPlots, doSBModelPlots=config.doSBModelPlots, doSummaryPlots=config.doSummaryPlots, doPlots=config.doAllPlots,
+                                       doSBPlots=config.doSBPlots, doSBModel=config.doSBModel, doSBModelPlots=config.doSBModelPlots, doSummaryPlots=config.doSummaryPlots, doPlots=config.doAllPlots,
                                        #
                                        force=force, doOnly=doOnly, makePlotTarball=config.makePlotTarball,
                                        #

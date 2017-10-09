@@ -101,7 +101,7 @@ class LumiFollowUp(object):
 				savePlots = True, fig_tuple = (17, 10), plotFormat = ".pdf",
 				plotDpi = 300, myfontsize = 16, n_skip = 1,  ## xrange step for time
 				makePlotTarball = False, doOnly = False, fill=None,
-				doCyclePlots=True, doCycleModelPlots=True, doSBPlots=True, doSBModelPlots=True, doSummaryPlots = False, doPlots = False, submit=False,
+				doCyclePlots=True, doCycleModelPlots=True, doSBPlots=True, doSBModel= False, doSBModelPlots=True, doSummaryPlots = False, doPlots = False, submit=False,
 				fill_yaml_database = '/afs/cern.ch/work/l/lumimod/private/LHC_2016_25ns_beforeTS1/LumiModel_FollowUp/autoScriptTesting/fill_db.yaml', fill_year=2016,
 				massi_afs_path='/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/', massi_exp_folders=['ATLAS/', 'CMS/lumi/']):
 		'''
@@ -369,6 +369,7 @@ class LumiFollowUp(object):
 		self.doCyclePlots            = doCyclePlots
 		self.doCycleModelPlots       = doCycleModelPlots
 		self.doSBPlots               = doSBPlots
+		self.doSBModel 				 = doSBModel
 		self.doSBModelPlots          = doSBModelPlots
 		self.doSummaryPlots          = doSummaryPlots
 		self.doPlots                 = doPlots
@@ -1291,7 +1292,7 @@ class LumiFollowUp(object):
 		debug('#checkDirectories : Checking if SB, fill and plots directories exist for fill {}'.format(filln))
 		if not os.path.exists(self.SB_dir):
 			if self.makedirs:
-				c(self.SB_dir)
+				os.makedirs(self.SB_dir)
 			else:
 				raise IOError('#checkDirectories : SB Analysis directory does not exist & makedirs option is switched off. Exiting...')
 		##- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1655,41 +1656,45 @@ class LumiFollowUp(object):
 
 		## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		## Check if the SB Model file of the fill exists and flag it
-		for case in self.cases:
+		if self.doSBModel:
+			for case in self.cases:
 
-			sbmodel_filename = self.fill_dir+self.SB_model_filename.replace('.pkl.gz', '_case{}.pkl.gz'.format(case))
-			sbmodel_filename = sbmodel_filename.replace('<FILLNUMBER>',str(filln))
-			info("# checkFiles : Checking model for case {} [{}]".format(case, sbmodel_filename))
-			if self.doRescale:
-				if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
-					sbmodel_filename = sbmodel_filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
+				sbmodel_filename = self.fill_dir+self.SB_model_filename.replace('.pkl.gz', '_case{}.pkl.gz'.format(case))
+				sbmodel_filename = sbmodel_filename.replace('<FILLNUMBER>',str(filln))
+				info("# checkFiles : Checking model for case {} [{}]".format(case, sbmodel_filename))
+				if self.doRescale:
+					if self.bmodes['period'][filln] != self.bmodes['rescaledPeriod'][filln]:
+						sbmodel_filename = sbmodel_filename.replace('<RESC>', self.resc_string).replace("<TO>", str(self.bmodes['rescaledPeriod'][filln]))
+					else:
+						sbmodel_filename = sbmodel_filename.replace('<RESC>', '').replace("<TO>", '')
 				else:
-					sbmodel_filename = sbmodel_filename.replace('<RESC>', '').replace("<TO>", '')
-			else:
-				sbmodel_filename = sbmodel_filename.replace('<RESC>', '')
+					sbmodel_filename = sbmodel_filename.replace('<RESC>', '')
 
-			if os.path.exists(sbmodel_filename):
-				if self.overwriteFiles:
-					warn("#checkFiles : Dictionary SB Model pickle [{}] for fill {} already exists! Overwritting it...".format(sbmodel_filename, filln))
+				if os.path.exists(sbmodel_filename):
+					if self.overwriteFiles:
+						warn("#checkFiles : Dictionary SB Model pickle [{}] for fill {} already exists! Overwritting it...".format(sbmodel_filename, filln))
+						doSBModel = True
+					else:
+						warn("#checkFiles : Dictionary SB Model pickle [{}] for fill {} already exists! Skipping it...".format(sbmodel_filename, filln))
+				else:
 					doSBModel = True
-				else:
-					warn("#checkFiles : Dictionary SB Model pickle [{}] for fill {} already exists! Skipping it...".format(sbmodel_filename, filln))
-			else:
-				doSBModel = True
-			debug('#checkFiles : Checking if dictionary pickle of SB Model file [{}] for fill {} exists [{}]'.format(sbmodel_filename, filln, (not doSBModel) ))
+				debug('#checkFiles : Checking if dictionary pickle of SB Model file [{}] for fill {} exists [{}]'.format(sbmodel_filename, filln, (not doSBModel) ))
 
-			if self.savePandas:
-				warn('#checkFiles : I do NOT check for SB model PANDAS -- Not implemented yet')
-			# sbmodel_filename=sbmodel_filename.replace('.pkl.gz', '_df.pkl.gz')
-			# if os.path.exists(sbmodel_filename):
-			#   if self.overwriteFiles:
-			#       warn("#checkFiles : Pandas SB Model pickle [{}] for fill {} already exists! Overwritting it...".format(sbmodel_filename, filln))
-			#       doSBModel = True
-			#   else:
-			#       warn("#checkFiles : Pandas SB Model pickle [{}] for fill {} already exists! Skipping it...".format(sbmodel_filename, filln))
-			# else:
-			#   doSBModel = True
-			# debug('#checkFiles : Checking if Pandas pickle of SB Model file [{}] for fill {} exists [{}]'.format(sbmodel_filename, filln, (not doSBModel) ))
+				if self.savePandas:
+					warn('#checkFiles : I do NOT check for SB model PANDAS -- Not implemented yet')
+				# sbmodel_filename=sbmodel_filename.replace('.pkl.gz', '_df.pkl.gz')
+				# if os.path.exists(sbmodel_filename):
+				#   if self.overwriteFiles:
+				#       warn("#checkFiles : Pandas SB Model pickle [{}] for fill {} already exists! Overwritting it...".format(sbmodel_filename, filln))
+				#       doSBModel = True
+				#   else:
+				#       warn("#checkFiles : Pandas SB Model pickle [{}] for fill {} already exists! Skipping it...".format(sbmodel_filename, filln))
+				# else:
+				#   doSBModel = True
+				# debug('#checkFiles : Checking if Pandas pickle of SB Model file [{}] for fill {} exists [{}]'.format(sbmodel_filename, filln, (not doSBModel) ))
+			else:
+				warn('#checkFiles : I was asked not to run for SB Model!')
+				doSBModel = self.doSBModel
 
 
 
@@ -3696,26 +3701,26 @@ class LumiFollowUp(object):
 		dict_case['cor_fact_1v']    = self.correction_factor_1v
 		dict_case['cor_fact_2v']    = self.correction_factor_2v
 
-		phi_full_rad_ATLAS = None
-		phi_full_rad_CMS   = None
-		fatal("# Run SB Model : Varying Crossing angle must be set in SBMODEL")
-		# get xing angle info
-		for key in self.XingAngle.keys():
-			print key, filln 
-			if filln in range(key[0], key[1]): # >= key[0] and filln<=key[1]:
-				print filln, key, self.XingAngle[key]
-				phi_full_rad_ATLAS  = self.XingAngle[key][0]
-				phi_full_rad_CMS    = self.XingAngle[key][1]
-				info('# runSBModel: Setting crossing angle IP1 = {} , IP5 = {}!'.format(phi_full_rad_ATLAS, phi_full_rad_CMS))
-				break
-			# else:
-			# 	
-			# 	return
-		if phi_full_rad_ATLAS is None or phi_full_rad_CMS is None:
-			warn('# runSBModel: Crossing angle information for IP1/IP5 not found!')
-			return
+		phi_full_rad_ATLAS = self.filln_StableBeamsDict['xing_angle'][1][np.newaxis].T #None
+		phi_full_rad_CMS   = self.filln_StableBeamsDict['xing_angle'][5][np.newaxis].T #None
+		# fatal("# Run SB Model : Varying Crossing angle must be set in SBMODEL")
+		# # get xing angle info
+		# for key in self.XingAngle.keys():
+		# 	print key, filln 
+		# 	if filln in range(key[0], key[1]): # >= key[0] and filln<=key[1]:
+		# 		print filln, key, self.XingAngle[key]
+		# 		phi_full_rad_ATLAS  = self.XingAngle[key][0]
+		# 		phi_full_rad_CMS    = self.XingAngle[key][1]
+		# 		info('# runSBModel: Setting crossing angle IP1 = {} , IP5 = {}!'.format(phi_full_rad_ATLAS, phi_full_rad_CMS))
+		# 		break
+		# 	# else:
+		# 	# 	
+		# 	# 	return
+		# if phi_full_rad_ATLAS is None or phi_full_rad_CMS is None:
+		# 	warn('# runSBModel: Crossing angle information for IP1/IP5 not found!')
+		# 	return
 
-			print phi_full_rad_ATLAS
+		# 	print phi_full_rad_ATLAS
 
 		for i_case,case in enumerate(dict_case['case']):
 			info('# runSBModel: Running for case {}...'.format(case))
@@ -4274,16 +4279,16 @@ class LumiFollowUp(object):
 		ms.mystyle_arial(self.myfontsize)
 
 
-		info("# makePerformancePlotsPerFill : Fill {} -> Making Emittances B1 plot...".format(filln))
+		info("# makePerformancePlotsPerFill : Fill {} -> Making Crossing Angle Plot...".format(filln))
 		fig_xing = pl.figure(0, figsize=self.fig_tuple)
-		fig_xing.canvas.set_window_title('Emittances B1')
+		fig_xing.canvas.set_window_title('Crossing Angle')
 		fig_xing.set_facecolor('w')
 		ax = pl.subplot(111)
-		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[1], 'b-', label='IP1', lw=3)
-		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[5], 'r-', label='IP5', lw=3)
+		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[1]*1.0e6/2.0, 'b-', label='IP1', lw=3)
+		ax.step(self.convertToLocalTime((time_range).astype(int)), xing[5]*1.0e6/2.0, 'r-', label='IP5', lw=3)
 		ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 		ax.set_xlabel('Time', fontsize=14, fontweight='bold')
-		ax.set_ylabel('Half Crossing Angle [$\mathbf{\mu}$rad]', fontsize=14, fontweight='bold')
+		ax.set_ylabel('Crossing Angle [$\mathbf{\mu}$rad]', fontsize=14, fontweight='bold')
 		ax.grid('on')
 		ax.legend(loc='best', fontsize=12)
 
@@ -4556,6 +4561,17 @@ class LumiFollowUp(object):
 		ax_b1_bbbtau = pl.subplot(211)
 		ax_b2_bbbtau = pl.subplot(212)
 
+
+		# ax_b1c = ax_b1_bbbtau.twinx()
+		# ax_b2c = ax_b2_bbbtau.twinx()
+		# ax_b1c.set_ylim(210,310)
+		# ax_b2c.set_ylim(210,310)
+
+		# ax_b1c.plot(self.convertToLocalTime((time_range[0:-1]).astype(int)), 1.0e6*self.filln_StableBeamsDict['xing_angle'][1][0:-1], 'k', linestyle='-', drawstyle='steps', lw=1)
+		# ax_b2c.plot(self.convertToLocalTime((time_range[0:-1]).astype(int)), 1.0e6*self.filln_StableBeamsDict['xing_angle'][1][0:-1], 'k', linestyle='-', drawstyle='steps', lw=1)
+		# ax_b1c.set_ylabel("Crossing Angle [$\mu$rad]", fontsize=14, fontweight='bold')
+		# ax_b2c.set_ylabel("Crossing Angle [$\mu$rad]", fontsize=14, fontweight='bold')
+
 		self.plot_mean_and_spread(ax_b1_bbbtau, self.convertToLocalTime(time_range[0:-1].astype(int)), dict_lifetime[1]['tau_Np_bbb']/3600., label='Beam 1 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[1]['tau_Np_bbb']/3600., axis=1)[0]), color='b', shade=True)
 		# self.plot_mean_and_spread(ax_b1_bbbtau, (time_range[0:-1]-time_range[0])/3600., dict_lifetime[1]['tau_Np_bbb']/3600., label='Beam 1 - $\\tau_{N_{p}^{0}}$'+'={:.2f}h'.format(np.mean(dict_lifetime[1]['tau_Np_bbb']/3600., axis=1)[0]), color='b', shade=True)
 		ax_b1_bbbtau.grid('on')
@@ -4634,13 +4650,24 @@ class LumiFollowUp(object):
 				ax_b1 = pl.subplot(211)
 				ax_b2 = pl.subplot(212)
 
+				# ax_b1c = ax_b1.twinx()
+				# ax_b2c = ax_b2.twinx()
+				# ax_b1c.set_ylim(210,310)
+				# ax_b2c.set_ylim(210,310)
+
+				# ax_b1c.plot(self.convertToLocalTime((time_range[0:-1]).astype(int)), 1.0e6*self.filln_StableBeamsDict['xing_angle'][1][0:-1], 'k', linestyle='-', drawstyle='steps', lw=1)
+				# ax_b2c.plot(self.convertToLocalTime((time_range[0:-1]).astype(int)), 1.0e6*self.filln_StableBeamsDict['xing_angle'][1][0:-1], 'k', linestyle='-', drawstyle='steps', lw=1)
+				# ax_b1c.set_ylabel("Crossing Angle [$\mu$rad]", fontsize=14, fontweight='bold')
+				# ax_b2c.set_ylabel("Crossing Angle [$\mu$rad]", fontsize=14, fontweight='bold')
+
 				# self.plot_mean_and_spread(ax_b1, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, label='Beam 1 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='b', shade=True)
 				self.plot_mean_and_spread(ax_b1, self.convertToLocalTime(time_range[0:-1].astype(int)), self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, label='Beam 1 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[1]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='b', shade=True)
 				ax_b1.axhline(80, xmin=0, xmax=1, color='black', label='$\sigma_{\mathrm{inel}}$ = 80mb')
 				ax_b1.grid('on')
 				ax_b1.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 				ax_b1.set_ylabel("$\mathbf{\left(\\frac{dN}{dt}\\right)\slash\mathcal{L}}$ [mb]", fontsize=14, fontweight='bold')
-				ax_b1.legend(loc='best')
+				# ax_b1.legend(loc='best')
+				ax_b1.legend(loc='upper right')
 
 				self.plot_mean_and_spread(ax_b2, self.convertToLocalTime(time_range[0:-1].astype(int)), self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, label='Beam 2 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='r', shade=True)
 				# self.plot_mean_and_spread(ax_b2, (time_range[0:-1]-time_range[0])/3600., self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, label='Beam 2 - $\sigma_{eff}^{0}$'+'={:.1f}mb'.format(np.mean(self.filln_LifetimeDict[2]['losses_dndtL_bbb']*1.0e31, axis=1)[0]), color='r', shade=True)
@@ -4648,7 +4675,8 @@ class LumiFollowUp(object):
 				ax_b2.grid('on')
 				ax_b2.set_xlabel('Time [h]', fontsize=14, fontweight='bold')
 				ax_b2.set_ylabel("$\mathbf{\left(\\frac{dN}{dt}\\right)\slash\mathcal{L}}$ [mb]", fontsize=14, fontweight='bold')
-				ax_b2.legend(loc='best')
+				# ax_b2.legend(loc='best')
+				ax_b2.legend(loc='upper right')
 				pl.subplots_adjust(hspace=0.5)#, hspace=0.7)
 				for ax in [ax_b1, ax_b2]:
 					ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
@@ -5209,8 +5237,12 @@ class LumiFollowUp(object):
 
 		if getMassi: # or getTimber
 			if not self.skipMassi:
-				info('#runForFill : Starting loop for Measured Luminosity for fill {}'.format(filln))
-				self.runMeasuredLuminosity(filln)
+				try:
+					info('#runForFill : Starting loop for Measured Luminosity for fill {}'.format(filln))
+					self.runMeasuredLuminosity(filln)
+				except:
+					warn('#runForFill : Issues with the Massi Files (corrupted?). Switching skipMassi flag to True')
+					self.skipMassi = True
 			# elif getTimber:
 			# 	info('#runForFill : Starting loop for TIMBER Measured Luminosity for fill {}'.format(filln))
 			# 	self.runTimberMeasuredLuminosity(filln)

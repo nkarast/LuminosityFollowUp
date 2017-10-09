@@ -11,12 +11,12 @@ import numpy as np
 # --- Fills and periods
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
-first_fill              = 5005
-last_fill               = 5751 +1 # use + 1 if only used in bmodes
+first_fill              = 5695
+last_fill               = 7000 +1 # use + 1 if only used in bmodes
 periods                 = {
-                            'A': (first_fill,  5256),
-                            'B': (5256,     5405),
-                            'C': (5405,     last_fill)
+                            'A': (first_fill,  last_fill),
+                            # 'B': (5256,     5405),
+                            # 'C': (5405,     last_fill)
                           }
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -25,10 +25,11 @@ periods                 = {
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 input_folder            = "/afs/cern.ch/work/l/lumimod/a2017_luminosity_followup/"
-working_folder          = input_folder
-data_folder             = input_folder+"Utilities/"
+# working_folder          = "/afs/cern.ch/user/l/lumimod/lumimod_eos/LumiFollowUp_2017/" #input_folder
+working_folder          = input_folder #"/eos/user/l/lumimod/2017/" # pre-path to SB
+data_folder             = "/eos/user/l/lumimod/2017/" #input_folder+"Utilities/"
 #data_folder             = input_folder+"dataFiles/"
-stableBeams_folder      = working_folder+"SB_analysis/"
+stableBeams_folder      = working_folder+"SB_analysis/"#working_folder+"SB_analysis/"
 fill_dir                = "fill_<FILLNUMBER>/"
 plot_dir                = "plots/"
 SB_filename             = "fill_<FILLNUMBER><RESC>.pkl.gz"
@@ -41,7 +42,7 @@ Lumi_filename           = "fill_<FILLNUMBER>_lumi_calc<RESC>.pkl.gz"
 makedirs                = True  # Create the directories if they do not exist
 overwriteFiles          = False # Overwrite existing files
 saveDict                = True  # Save data in dictionary form
-savePandas              = True  # Save data in Pandas DataFrame form (experimental)
+savePandas              = False  # Save data in Pandas DataFrame form (experimental)
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 #
@@ -61,8 +62,8 @@ add_resc_string         = ''			# do i need to add an extra string in the filenam
 # --- Stable Beams Configuratio
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
-min_time_SB             = 30*60     # minimum required time in SB to consider fill
-t_step_sec              = 10*60     # time step for SB   - data are aligned for every 10 minutes
+min_time_SB             = 5*60     # minimum required time in SB to consider fill
+t_step_sec              = 5.*60.     # time step for SB   - data are aligned for every 10 minutes
 intensity_threshold     = 3.0e10    # intensity threshold
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -89,8 +90,9 @@ correction_factor_2v    = [1.]#, 0.2413]#1., 1.,  1.,     1.12,   1.12]		#					 
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 BASIC_DATA_FILE         = data_folder+'fill_basic_data_csvs/basic_data_fill_<FILLNUMBER>.csv'
+BASIC_CROSSING_FILE     = data_folder+'fill_crossing_data_csvs/crossing_angle_fill_<FILLNUMBER>.csv'
 BBB_DATA_FILE           = data_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_data_fill_<FILLNUMBER>.csv'
-BBB_LUMI_DATA_FILE      = data_folder+'fill_bunchbybunch_data_csvs/bunchbybunch_lumi_data_fill_<FILLNUMBER>.csv'
+BBB_LUMI_DATA_FILE      = data_folder+'fill_bunchbybunch_lumi_data_csvs/bunchbybunch_lumi_data_fill_<FILLNUMBER>.csv'
 fills_bmodes_file       = data_folder+'fills_and_bmodes.pkl'
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -99,7 +101,7 @@ fills_bmodes_file       = data_folder+'fills_and_bmodes.pkl'
 #
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 Massi_filename          = 'fill_<FILLNUMBER>_lumi_meas.pkl.gz'
-massi_file_database     = working_folder+"Utilities/fill_db.yaml"
+massi_file_database     = input_folder+"Utilities/fill_db.yaml"
 massi_year              = 2017
 massi_afs_path          = '/afs/cern.ch/user/l/lpc/w0/<YEAR>/measurements/'
 massi_exp_folders       = ['ATLAS/lumi/', 'CMS/lumi/']
@@ -123,7 +125,7 @@ tauSRxy_FB              = np.inf    # damping times due to synchrotron radiation
 tauSRl_FT               = 32.35*3600# damping times due to synchrotron radiation at FT energy (in s) for longitudinal plane
 VRF_FT                  = 12.0e06   # RF Voltage at flat top (in V)
 VRF_FB                  = 6.0e06    # RF Voltage at flat bottom (in V)
-betastar_m              = 0.40      # beta function at IP used for lumi calculation
+betastar_m              = 0.30      # beta function at IP used for lumi calculation
 sigmaBOff_m2            = 80.0*1.0e-31 # burnoff cross-section
 sigma_el_m2             = 29.7*1.0e-31 # inelastic cross-section
 crossingAngleChange     = True      # has the crossing angle changed between fills?
@@ -132,10 +134,13 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
                             (5330,          5600)       : [2*140.0e-06, 2*140.0e-06 ],
                             (5600,          5700)       : [2*150.0e-06, 2*150.0e-06 ],
                             (5700,          5711)       : [2*140.0e-06, 2*150.0e-06 ],
-	    	            (5711,          5731)       : [2*150.0e-06, 2*150.0e-06 ],
-			    (5731, 	    5738)	: [2*120.0e-06, 2*120.0e-06 ],
-			    (5738,          last_fill)       : [2*150.0e-06, 2*150.0e-06 ],
-
+	    	                (5711,          5731)       : [2*150.0e-06, 2*150.0e-06 ],
+			                (5731,    	    5738)     	: [2*120.0e-06, 2*120.0e-06 ],
+			                (5738,          5831)       : [2*150.0e-06, 2*150.0e-06 ],
+                            (5833,          5834)       : [2*120.0e-06, 2*120.0e-06 ],
+                            (5834,          5841)       : [2*140.0e-06, 2*140.0e-06 ],     
+                            (5841,          5845)       : [2*150.0e-06, 2*150.0e-06 ],     
+			                (5845,          last_fill)  : [2*150.0e-06, 2*150.0e-06 ],
                           }
 
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
@@ -145,9 +150,10 @@ XingAngle               = {         # dictionary for fill ranges and full crossi
 # - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - * - - *
 doAllPlots              = True 	# experimental
 
-doCyclePlots            = False  	# make the Cycle Plots
-doCycleModelPlots       = False  # make the Cycle Model Plots
+doCyclePlots            = True  	# make the Cycle Plots
+doCycleModelPlots       = True  # make the Cycle Model Plots
 doSBPlots               = True  # make the SB plots
+doSBModel               = False
 doSBModelPlots          = False # make the SB Model Plots
 doSummaryPlots          = False    # experimental
 

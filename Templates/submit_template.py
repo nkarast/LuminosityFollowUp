@@ -33,7 +33,7 @@ if __name__ == '__main__':
                                    min_time_SB=config.min_time_SB, first_fill=config.first_fill, last_fill=config.last_fill, t_step_sec=config.t_step_sec, t_fit_length=config.t_fit_length,
                                    intensity_threshold=config.intensity_threshold, enable_smoothing_BSRT=config.enable_smoothing_BSRT,
                                    avg_time_smoothing=config.avg_time_smoothing, periods=config.periods, doRescale=config.doRescale,
-                                   resc_period=config.resc_period, add_resc_string=config.add_resc_string, BASIC_DATA_FILE=config.BASIC_DATA_FILE,
+                                   resc_period=config.resc_period, add_resc_string=config.add_resc_string, BASIC_DATA_FILE=config.BASIC_DATA_FILE, BASIC_CROSSING_FILE=config.BASIC_CROSSING_FILE,
                                    BBB_DATA_FILE=config.BBB_DATA_FILE, BBB_LUMI_DATA_FILE=config.BBB_LUMI_DATA_FILE, makedirs=config.makedirs, overwriteFiles=config.overwriteFiles,
                                    SB_dir=config.stableBeams_folder, fill_dir=config.fill_dir, plot_dir=config.plot_dir,
                                    SB_filename=config.SB_filename, SB_fits_filename = config.SB_fits_filename, SB_models=config.models,
@@ -51,7 +51,7 @@ if __name__ == '__main__':
                                    # plots
                                    savePlots=config.savePlots, fig_tuple=config.fig_tuple, plotFormat=config.plotFormat,
                                    plotDpi=config.plotDpi, myfontsize=config.myfontsize, n_skip=config.n_skip, doCyclePlots=config.doCyclePlots, doCycleModelPlots=config.doCycleModelPlots,
-                                   doSBPlots=config.doSBPlots, doSBModelPlots=config.doSBModelPlots, doSummaryPlots=config.doSummaryPlots, doPlots=config.doAllPlots,
+                                   doSBPlots=config.doSBPlots, doSBModel=config.doSBModel, doSBModelPlots=config.doSBModelPlots, doSummaryPlots=config.doSummaryPlots, doPlots=config.doAllPlots,
                                    #
                                    force=%FORCE, doOnly=%DOONLY, makePlotTarball=config.makePlotTarball,
                                    #
